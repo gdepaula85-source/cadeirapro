@@ -30,8 +30,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: t.nav.dashboard, icon: Home },
   { to: '/calendar', label: t.nav.calendar, icon: CalendarDays, soon: true },
-  { to: '/clients', label: t.nav.clients, icon: Users, soon: true },
-  { to: '/services', label: t.nav.services, icon: Scissors, soon: true },
+  { to: '/clients', label: t.nav.clients, icon: Users },
+  { to: '/services', label: t.nav.services, icon: Scissors },
   { to: '/payments', label: t.nav.payments, icon: CreditCard, soon: true },
   { to: '/settings', label: t.nav.settings, icon: Settings, soon: true },
 ];

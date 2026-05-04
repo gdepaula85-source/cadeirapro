@@ -3,7 +3,16 @@
 // and the §6 JWT-claims-race retry-once-after-refreshSession defence.
 import { v4 as uuid } from 'uuid';
 import { supabase } from './supabase';
-import type { Me, SignUpInput } from '@cadeirapro/shared';
+import type {
+  Client,
+  CreateClientInput,
+  CreateServiceInput,
+  Me,
+  Service,
+  SignUpInput,
+  UpdateClientInput,
+  UpdateServiceInput,
+} from '@cadeirapro/shared';
 
 const BASE = import.meta.env.VITE_API_BASE;
 if (!BASE) throw new Error('VITE_API_BASE must be set');
@@ -78,4 +87,29 @@ export const api = {
       input,
       { idempotent: true },
     ),
+  services: {
+    list: (includeInactive = false) =>
+      request<Service[]>(
+        'GET',
+        `/v1/services${includeInactive ? '?includeInactive=true' : ''}`,
+      ),
+    create: (input: CreateServiceInput) =>
+      request<Service>('POST', '/v1/services', input, { idempotent: true }),
+    update: (id: string, input: UpdateServiceInput) =>
+      request<Service>('PATCH', `/v1/services/${id}`, input, { idempotent: true }),
+    archive: (id: string) =>
+      request<Service>('DELETE', `/v1/services/${id}`, undefined, { idempotent: true }),
+  },
+  clients: {
+    list: (q = '') =>
+      request<Client[]>('GET', `/v1/clients${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+    create: (input: CreateClientInput) =>
+      request<Client>('POST', '/v1/clients', input, { idempotent: true }),
+    update: (id: string, input: UpdateClientInput) =>
+      request<Client>('PATCH', `/v1/clients/${id}`, input, { idempotent: true }),
+    archive: (id: string) =>
+      request<{ id: string; anonymizedAt: string }>('DELETE', `/v1/clients/${id}`, undefined, {
+        idempotent: true,
+      }),
+  },
 };
