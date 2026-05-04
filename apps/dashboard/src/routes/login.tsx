@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AlertCircle, HelpCircle, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { AuthLayout } from '../components/AuthLayout';
 import { Field } from '../components/Field';
@@ -36,7 +37,10 @@ export function LoginPage() {
       footer={
         <>
           {t.login.noAccount}{' '}
-          <Link to="/signup" className="text-[var(--color-text)] underline">
+          <Link
+            to="/signup"
+            className="font-medium text-[var(--color-text)] underline hover:no-underline"
+          >
             {t.login.createAccount}
           </Link>
         </>
@@ -46,6 +50,7 @@ export function LoginPage() {
         <Field
           label={t.login.email}
           type="email"
+          icon={Mail}
           autoComplete="email"
           required
           value={email}
@@ -54,12 +59,27 @@ export function LoginPage() {
         <Field
           label={t.login.password}
           type="password"
+          icon={Lock}
           autoComplete="current-password"
           required
           value={password}
           onChange={(e) => setPassword(e.currentTarget.value)}
         />
-        {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
+        <div className="flex justify-end -mt-1">
+          <Link
+            to="/forgot-password"
+            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-surface-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/30"
+          >
+            <HelpCircle size={14} aria-hidden />
+            {t.login.forgotPassword}
+          </Link>
+        </div>
+        {error ? (
+          <div className="flex items-start gap-2 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        ) : null}
         <Button type="submit" loading={submitting} className="w-full">
           {submitting ? t.login.submitting : t.login.submit}
         </Button>

@@ -3,6 +3,7 @@
 // for the "verifique seu e-mail" landing.
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { AlertCircle, FileDigit, Hash, KeyRound, Phone, Scissors } from 'lucide-react';
 import { AuthLayout } from '../../components/AuthLayout';
 import { Field, SelectField } from '../../components/Field';
 import { Button } from '../../components/Button';
@@ -69,10 +70,11 @@ export function SignUpStep2Page() {
     <AuthLayout
       title={t.signup.step2Title}
       subtitle={t.signup.step2Subtitle}
+      step={{ current: 2, total: 3 }}
       footer={
         <>
           {t.signup.haveAccount}{' '}
-          <Link to="/login" className="text-[var(--color-text)] underline">
+          <Link to="/login" className="font-medium text-[var(--color-text)] underline">
             {t.signup.signIn}
           </Link>
         </>
@@ -81,6 +83,7 @@ export function SignUpStep2Page() {
       <form className="space-y-4" onSubmit={onSubmit}>
         <Field
           label={t.signup.shopName}
+          icon={Scissors}
           required
           minLength={2}
           maxLength={80}
@@ -89,6 +92,7 @@ export function SignUpStep2Page() {
         />
         <Field
           label={t.signup.cpfOrCnpj}
+          icon={FileDigit}
           required
           inputMode="numeric"
           pattern="\d{11}|\d{14}"
@@ -98,6 +102,7 @@ export function SignUpStep2Page() {
         />
         <SelectField
           label={t.signup.primaryPixKeyType}
+          icon={Hash}
           value={primaryPixKeyType}
           onChange={(e) => setPrimaryPixKeyType(e.currentTarget.value as PixKeyType)}
           options={[
@@ -110,6 +115,7 @@ export function SignUpStep2Page() {
         />
         <Field
           label={t.signup.primaryPixKey}
+          icon={KeyRound}
           required
           value={primaryPixKey}
           onChange={(e) => setPrimaryPixKey(e.currentTarget.value)}
@@ -117,12 +123,18 @@ export function SignUpStep2Page() {
         <Field
           label={t.signup.whatsappPhone}
           type="tel"
+          icon={Phone}
           placeholder="+5511999998888"
           helper={t.signup.whatsappPhoneHelp}
           value={whatsappPhone}
           onChange={(e) => setWhatsappPhone(e.currentTarget.value)}
         />
-        {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
+        {error ? (
+          <div className="flex items-start gap-2 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        ) : null}
         <Button type="submit" loading={submitting} className="w-full">
           {submitting ? t.signup.submitting : t.signup.submit}
         </Button>

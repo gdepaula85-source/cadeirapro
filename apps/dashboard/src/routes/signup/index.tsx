@@ -3,6 +3,7 @@
 // submitted in step 2.
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Lock, Mail } from 'lucide-react';
 import { AuthLayout } from '../../components/AuthLayout';
 import { Field } from '../../components/Field';
 import { Button } from '../../components/Button';
@@ -27,6 +28,7 @@ export function SignUpStep1Page() {
     <AuthLayout
       title={t.signup.step1Title}
       subtitle={t.signup.step1Subtitle}
+      step={{ current: 1, total: 3 }}
       footer={
         <>
           {t.signup.haveAccount}{' '}
@@ -40,6 +42,7 @@ export function SignUpStep1Page() {
         <Field
           label={t.signup.email}
           type="email"
+          icon={Mail}
           autoComplete="email"
           required
           value={email}
@@ -48,6 +51,7 @@ export function SignUpStep1Page() {
         <Field
           label={t.signup.password}
           type="password"
+          icon={Lock}
           autoComplete="new-password"
           minLength={10}
           required

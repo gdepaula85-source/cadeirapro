@@ -3,16 +3,43 @@
 import type { ReactNode } from 'react';
 import { t } from '../strings/pt-BR';
 
+interface StepIndicatorProps {
+  step: number;
+  total: number;
+}
+
+function StepIndicator({ step, total }: StepIndicatorProps) {
+  return (
+    <div className="mb-4 flex items-center gap-2">
+      <div className="flex-1 flex gap-1.5">
+        {Array.from({ length: total }, (_, i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-colors ${
+              i < step ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'
+            }`}
+          />
+        ))}
+      </div>
+      <span className="text-[11px] font-medium text-[var(--color-text-muted)] tabular-nums whitespace-nowrap">
+        {t.signup.stepLabel(step, total)}
+      </span>
+    </div>
+  );
+}
+
 export function AuthLayout({
   title,
   subtitle,
   children,
   footer,
+  step,
 }: {
   title: string;
   subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
+  step?: { current: number; total: number };
 }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)] px-4 py-12">
@@ -33,6 +60,7 @@ export function AuthLayout({
           <p className="text-xs text-[var(--color-text-muted)] mt-1">{t.app.tagline}</p>
         </div>
         <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-sm p-7">
+          {step ? <StepIndicator step={step.current} total={step.total} /> : null}
           <div className="mb-5">
             <h2 className="text-lg font-semibold text-[var(--color-text)] tracking-tight">
               {title}

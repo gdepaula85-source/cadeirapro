@@ -27,8 +27,8 @@ const AuthContext = createContext<AuthApi | null>(null);
 
 /**
  * Origin-aware redirect URL for Supabase Auth email flows.
- * Returns e.g. `http://localhost:5173/auth/callback` in dev,
- * `https://cadeirapro-dashboard.pages.dev/auth/callback` in staging.
+ * Returns e.g. `http://localhost:5173/reset-password` in dev,
+ * `https://cadeirapro-dashboard.pages.dev/reset-password` in staging.
  * Both are listed in Supabase → Auth → URL Configuration → Redirect URLs.
  */
 export function authRedirectUrl(path = '/auth/callback'): string {
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: authRedirectUrl('/login'),
+      redirectTo: authRedirectUrl('/reset-password'),
     });
     if (error) throw error;
   };

@@ -7,6 +7,8 @@ import { queryClient } from './lib/query';
 import { DashboardLayout } from './routes/_layout';
 import { DashboardPage } from './routes/dashboard';
 import { LoginPage } from './routes/login';
+import { ForgotPasswordPage } from './routes/forgot-password';
+import { ResetPasswordPage } from './routes/reset-password';
 import { SignUpStep1Page } from './routes/signup/index';
 import { SignUpStep2Page } from './routes/signup/shop';
 import { SignUpDonePage } from './routes/signup/done';
@@ -14,6 +16,8 @@ import './styles.css';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/signup', element: <SignUpStep1Page /> },
   { path: '/signup/shop', element: <SignUpStep2Page /> },
   { path: '/signup/done', element: <SignUpDonePage /> },
