@@ -181,7 +181,7 @@ export function ClientsPage() {
               icon={User}
               required
               value={form.name}
-              onChange={(e) => setForm((s) => ({ ...s, name: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, name: e.currentTarget.value })}
             />
             <Field
               label={t.clients.phone}
@@ -189,19 +189,19 @@ export function ClientsPage() {
               type="tel"
               required
               value={form.phone}
-              onChange={(e) => setForm((s) => ({ ...s, phone: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, phone: e.currentTarget.value })}
             />
             <Field
               label={t.clients.email}
               icon={Mail}
               type="email"
               value={form.email}
-              onChange={(e) => setForm((s) => ({ ...s, email: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, email: e.currentTarget.value })}
             />
             <Field
               label={t.clients.notes}
               value={form.notes}
-              onChange={(e) => setForm((s) => ({ ...s, notes: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, notes: e.currentTarget.value })}
             />
             {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
             <Button type="submit" loading={saveMutation.isPending} className="w-full gap-2">

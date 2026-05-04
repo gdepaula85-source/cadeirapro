@@ -270,7 +270,7 @@ export function StaffPage() {
               label={t.staff.role}
               value={form.role}
               disabled={!!form.id}
-              onChange={(e) => setForm((s) => ({ ...s, role: e.currentTarget.value as StaffRole }))}
+              onChange={(e) => setForm({ ...form, role: e.currentTarget.value as StaffRole })}
               options={[
                 { value: 'barber', label: t.staff.roles.barber },
                 { value: 'staff', label: t.staff.roles.staff },
@@ -282,7 +282,7 @@ export function StaffPage() {
               minLength={2}
               maxLength={80}
               value={form.displayName}
-              onChange={(e) => setForm((s) => ({ ...s, displayName: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, displayName: e.currentTarget.value })}
             />
             <Field
               label={t.staff.email}
@@ -291,7 +291,7 @@ export function StaffPage() {
               required
               helper={form.id ? undefined : t.staff.emailHelp}
               value={form.email}
-              onChange={(e) => setForm((s) => ({ ...s, email: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, email: e.currentTarget.value })}
             />
             <Field
               label={t.staff.phone}
@@ -300,16 +300,16 @@ export function StaffPage() {
               placeholder="+5511999998888"
               helper={t.staff.phoneHelp}
               value={form.phone}
-              onChange={(e) => setForm((s) => ({ ...s, phone: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, phone: e.currentTarget.value })}
             />
             <SelectField
               label={t.staff.partnerStatus}
               value={form.partnerStatus}
               onChange={(e) =>
-                setForm((s) => ({
-                  ...s,
+                setForm({
+                  ...form,
                   partnerStatus: e.currentTarget.value as 'parceiro' | 'employee',
-                }))
+                })
               }
               options={[
                 { value: 'parceiro', label: t.staff.partnerStatusOptions.parceiro },
@@ -324,19 +324,19 @@ export function StaffPage() {
               step={1}
               helper={t.staff.commissionPctHelp}
               value={form.commissionPctText}
-              onChange={(e) => setForm((s) => ({ ...s, commissionPctText: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, commissionPctText: e.currentTarget.value })}
             />
             <Field
               label={t.staff.pixKey}
               icon={KeyRound}
               value={form.pixKey}
-              onChange={(e) => setForm((s) => ({ ...s, pixKey: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, pixKey: e.currentTarget.value })}
             />
             <SelectField
               label={t.staff.pixKeyType}
               value={form.pixKeyType}
               onChange={(e) =>
-                setForm((s) => ({ ...s, pixKeyType: e.currentTarget.value as PixKeyType | '' }))
+                setForm({ ...form, pixKeyType: e.currentTarget.value as PixKeyType | '' })
               }
               options={[
                 { value: '', label: '—' },
@@ -353,7 +353,7 @@ export function StaffPage() {
                   type="checkbox"
                   className="h-4 w-4 accent-[var(--color-primary)]"
                   checked={form.isActive}
-                  onChange={(e) => setForm((s) => ({ ...s, isActive: e.currentTarget.checked }))}
+                  onChange={(e) => setForm({ ...form, isActive: e.currentTarget.checked })}
                 />
                 {t.staff.isActive}
               </label>

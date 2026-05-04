@@ -427,9 +427,7 @@ function BookingFormModal({
           <SelectField
             label={t.calendar.booking.service}
             value={form.serviceId}
-            onChange={(e) =>
-              setForm((s) => ({ ...s, serviceId: e.currentTarget.value, startsAt: '' }))
-            }
+            onChange={(e) => setForm({ ...form, serviceId: e.currentTarget.value, startsAt: '' })}
             options={[
               { value: '', label: t.calendar.booking.pickService },
               ...services.map((srv) => ({
@@ -441,7 +439,7 @@ function BookingFormModal({
           <SelectField
             label={t.calendar.booking.client}
             value={form.clientId}
-            onChange={(e) => setForm((s) => ({ ...s, clientId: e.currentTarget.value }))}
+            onChange={(e) => setForm({ ...form, clientId: e.currentTarget.value })}
             options={[
               { value: '', label: t.calendar.booking.pickClient },
               ...clients.map((c) => ({ value: c.id, label: `${c.name} · ${c.phone}` })),
@@ -450,7 +448,7 @@ function BookingFormModal({
           <SelectField
             label={t.calendar.booking.slot}
             value={form.startsAt}
-            onChange={(e) => setForm((s) => ({ ...s, startsAt: e.currentTarget.value }))}
+            onChange={(e) => setForm({ ...form, startsAt: e.currentTarget.value })}
             disabled={!form.serviceId || slotsLoading}
             options={[
               {
@@ -475,7 +473,7 @@ function BookingFormModal({
           <Field
             label={t.calendar.booking.notes}
             value={form.notes}
-            onChange={(e) => setForm((s) => ({ ...s, notes: e.currentTarget.value }))}
+            onChange={(e) => setForm({ ...form, notes: e.currentTarget.value })}
           />
           {error ? (
             <div className="flex items-start gap-2 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">

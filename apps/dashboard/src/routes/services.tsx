@@ -194,12 +194,12 @@ export function ServicesPage() {
               label={t.services.name}
               required
               value={form.name}
-              onChange={(e) => setForm((s) => ({ ...s, name: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, name: e.currentTarget.value })}
             />
             <Field
               label={t.services.description}
               value={form.description}
-              onChange={(e) => setForm((s) => ({ ...s, description: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, description: e.currentTarget.value })}
             />
             <div className="grid grid-cols-2 gap-3">
               <Field
@@ -209,27 +209,27 @@ export function ServicesPage() {
                 step={5}
                 required
                 value={form.durationMinutes}
-                onChange={(e) => setForm((s) => ({ ...s, durationMinutes: e.currentTarget.value }))}
+                onChange={(e) => setForm({ ...form, durationMinutes: e.currentTarget.value })}
               />
               <Field
                 label={t.services.priceBrl}
                 required
                 value={form.priceBrl}
-                onChange={(e) => setForm((s) => ({ ...s, priceBrl: e.currentTarget.value }))}
+                onChange={(e) => setForm({ ...form, priceBrl: e.currentTarget.value })}
               />
             </div>
             <Field
               label={t.services.sortOrder}
               type="number"
               value={form.sortOrder}
-              onChange={(e) => setForm((s) => ({ ...s, sortOrder: e.currentTarget.value }))}
+              onChange={(e) => setForm({ ...form, sortOrder: e.currentTarget.value })}
             />
             <label className="flex items-center gap-2 text-sm text-[var(--color-text)]">
               <input
                 type="checkbox"
                 className="h-4 w-4 accent-[var(--color-primary)]"
                 checked={form.isActive}
-                onChange={(e) => setForm((s) => ({ ...s, isActive: e.currentTarget.checked }))}
+                onChange={(e) => setForm({ ...form, isActive: e.currentTarget.checked })}
               />
               {t.services.isActive}
             </label>
