@@ -6,6 +6,14 @@ import type {
   SignUpInputSchema,
   MeSchema,
   PixKeyTypeSchema,
+  ServiceSchema,
+  CreateServiceInputSchema,
+  UpdateServiceInputSchema,
+  ServiceListQuerySchema,
+  ClientSchema,
+  CreateClientInputSchema,
+  UpdateClientInputSchema,
+  ClientListQuerySchema,
 } from '../schemas';
 
 export type Organization = z.infer<typeof OrganizationSchema>;
@@ -14,3 +22,11 @@ export type Role = z.infer<typeof RoleSchema>;
 export type SignUpInput = z.infer<typeof SignUpInputSchema>;
 export type Me = z.infer<typeof MeSchema>;
 export type PixKeyType = z.infer<typeof PixKeyTypeSchema>;
+export type Service = z.infer<typeof ServiceSchema>;
+export type CreateServiceInput = z.infer<typeof CreateServiceInputSchema>;
+export type UpdateServiceInput = z.infer<typeof UpdateServiceInputSchema>;
+export type ServiceListQuery = z.infer<typeof ServiceListQuerySchema>;
+export type Client = z.infer<typeof ClientSchema>;
+export type CreateClientInput = z.infer<typeof CreateClientInputSchema>;
+export type UpdateClientInput = z.infer<typeof UpdateClientInputSchema>;
+export type ClientListQuery = z.infer<typeof ClientListQuerySchema>;

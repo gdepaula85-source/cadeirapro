@@ -13,6 +13,29 @@ export {
   RoleSchema,
   SignUpInputSchema,
   MeSchema,
+  ServiceSchema,
+  CreateServiceInputSchema,
+  UpdateServiceInputSchema,
+  ServiceListQuerySchema,
+  ClientSchema,
+  CreateClientInputSchema,
+  UpdateClientInputSchema,
+  ClientListQuerySchema,
 } from './schemas';
 
-export type { PixKeyType, Organization, Profile, Role, SignUpInput, Me } from './types';
+export type {
+  PixKeyType,
+  Organization,
+  Profile,
+  Role,
+  SignUpInput,
+  Me,
+  Service,
+  CreateServiceInput,
+  UpdateServiceInput,
+  ServiceListQuery,
+  Client,
+  CreateClientInput,
+  UpdateClientInput,
+  ClientListQuery,
+} from './types';

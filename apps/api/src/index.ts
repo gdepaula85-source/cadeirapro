@@ -8,6 +8,8 @@ import { errorHandler } from './lib/errors';
 import { healthRouter } from './routes/health';
 import { meRouter } from './routes/me';
 import { authRouter } from './routes/auth';
+import { servicesRouter } from './routes/services';
+import { clientsRouter } from './routes/clients';
 
 const app = new Hono<AppEnv>();
 
@@ -22,6 +24,8 @@ app.use('*', requestId);
 app.route('/', healthRouter);
 app.route('/', meRouter);
 app.route('/', authRouter);
+app.route('/', servicesRouter);
+app.route('/', clientsRouter);
 
 // 404 fallback.
 app.notFound((c) => c.json({ error: { code: 'not_found' } }, 404));
