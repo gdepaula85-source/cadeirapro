@@ -1,0 +1,23 @@
+# Supabase CLI configuration — minimal version pinned for staging workflow.
+# Full template:  supabase init  (we wrote this by hand to avoid the CLI's
+# extensive boilerplate; expand fields as needed when local-stack work begins).
+
+project_id = "cadeirapro"
+
+[db]
+# Host port mapped to the Postgres container when running `supabase start`.
+# Staging schema is applied via `supabase db push` against the linked project,
+# not via the local stack — see README "One-off manual steps".
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.migrations]
+# Glob of SQL files applied in lexical order by `supabase migration up`.
+# We use 0001_, 0002_ prefixes per SPRINT_1 §3 rather than the default
+# timestamp prefix; both work as long as ordering is deterministic.
+schema_paths = ["./migrations/*.sql"]
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]

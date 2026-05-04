@@ -1,0 +1,56 @@
+# Auto-deploy the Worker on push to main when the api or shared package changes.
+# SPRINT_1 §8.
+#
+# Runtime SECRETS (SUPABASE_SERVICE_ROLE_KEY, etc.) are NOT set here — they
+# live in Cloudflare's secret store, set once via `wrangler secret put`. CI
+# only needs the Cloudflare API token to authenticate the deploy.
+
+name: deploy-api
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/shared/**'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: staging
+      url: https://cadeirapro-api.g-depaula85.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (api + shared)
+        run: pnpm --filter api --filter @cadeirapro/shared typecheck
+
+      - name: Test (api + shared)
+        run: pnpm --filter api --filter @cadeirapro/shared test
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/api
+          command: deploy --minify

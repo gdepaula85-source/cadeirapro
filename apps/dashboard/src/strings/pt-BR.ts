@@ -1,0 +1,82 @@
+// All user-facing copy. Build Guide §14.2: never hardcode pt-BR strings in
+// components, even with a single locale today. Future-proofs i18n.
+
+export const t = {
+  app: {
+    name: 'CadeiraPro',
+    tagline: 'Gestão de barbearia em tempo real',
+  },
+  nav: {
+    dashboard: 'Início',
+    calendar: 'Agenda',
+    clients: 'Clientes',
+    services: 'Serviços',
+    payments: 'Pagamentos',
+    settings: 'Configurações',
+    signOut: 'Sair',
+  },
+  login: {
+    title: 'Entrar',
+    email: 'E-mail',
+    password: 'Senha',
+    submit: 'Entrar',
+    submitting: 'Entrando...',
+    noAccount: 'Ainda não tem uma conta?',
+    createAccount: 'Criar conta',
+    invalid: 'E-mail ou senha incorretos.',
+    needsConfirmation: 'Verifique seu e-mail antes de entrar.',
+  },
+  signup: {
+    step1Title: 'Criar conta',
+    step1Subtitle: 'Comece com seu e-mail e uma senha.',
+    step2Title: 'Sua barbearia',
+    step2Subtitle: 'Algumas informações para configurar seu cadastro.',
+    step3Title: 'Verifique seu e-mail',
+    step3Body:
+      'Enviamos um link de confirmação para o e-mail informado. Clique no link para ativar sua conta.',
+    step3Resend: 'Reenviar e-mail de verificação',
+    step3OpenLogin: 'Já confirmei, entrar agora',
+    email: 'E-mail',
+    password: 'Senha',
+    passwordHelp: 'Mínimo 10 caracteres.',
+    shopName: 'Nome da barbearia',
+    cpfOrCnpj: 'CPF ou CNPJ',
+    cpfOrCnpjHelp: 'Apenas números (11 ou 14 dígitos).',
+    primaryPixKey: 'Chave Pix principal',
+    primaryPixKeyType: 'Tipo da chave',
+    pixTypes: {
+      cpf: 'CPF',
+      cnpj: 'CNPJ',
+      email: 'E-mail',
+      phone: 'Telefone (E.164)',
+      random: 'Chave aleatória (UUID)',
+    },
+    whatsappPhone: 'WhatsApp (opcional)',
+    whatsappPhoneHelp: 'Formato E.164 — ex.: +5511999998888',
+    next: 'Continuar',
+    submit: 'Criar conta',
+    submitting: 'Criando conta...',
+    haveAccount: 'Já tem conta?',
+    signIn: 'Entrar',
+    errors: {
+      emailInUse: 'Este e-mail já está cadastrado.',
+      pixFormat: 'A chave Pix não corresponde ao tipo selecionado.',
+      generic: 'Não foi possível concluir o cadastro. Tente novamente.',
+    },
+  },
+  dashboard: {
+    greeting: 'Bem-vindo',
+    kpis: {
+      bookingsToday: 'Agendamentos hoje',
+      revenueToday: 'Receita hoje',
+      noShowRate: 'Taxa de no-show',
+      activeClients: 'Clientes ativos',
+    },
+    placeholder: '—',
+    sprintNote: 'Calendário, clientes e pagamentos chegam no Sprint 2.',
+  },
+  errors: {
+    network: 'Falha de conexão. Verifique sua internet e tente novamente.',
+    unexpected: 'Algo deu errado. Tente novamente em alguns instantes.',
+  },
+} as const;

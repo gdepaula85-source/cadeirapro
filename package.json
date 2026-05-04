@@ -1,0 +1,41 @@
+{
+  "name": "cadeirapro",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CadeiraPro — white-label SaaS booking platform for Brazilian barbershops",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm run --parallel --filter \"./apps/*\" dev",
+    "dev:api": "pnpm --filter api dev",
+    "dev:dashboard": "pnpm --filter dashboard dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "test:run": "pnpm -r run test:run",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r run typecheck",
+    "db:migrate": "supabase migration up",
+    "db:reset": "supabase db reset",
+    "deploy:api": "pnpm --filter api deploy",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.1",
+    "@commitlint/config-conventional": "^19.6.0",
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.4.2",
+    "supabase": "^2.98.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
+  }
+}

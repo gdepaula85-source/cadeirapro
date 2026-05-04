@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+/* Default Clássico-ish token set per SPRINT_1 §7 — placeholder until the
+   designer's Figma lands. Themes 1–6 + per-shop overrides land in S5. */
+@theme {
+  --color-primary: oklch(0.205 0.018 260); /* deep slate */
+  --color-primary-fg: oklch(0.985 0 0); /* near-white */
+  --color-accent: oklch(0.728 0.183 56); /* warm amber */
+  --color-accent-fg: oklch(0.205 0.018 260);
+  --color-background: oklch(0.985 0 0);
+  --color-surface: oklch(1 0 0);
+  --color-surface-muted: oklch(0.965 0.005 260);
+  --color-text: oklch(0.205 0.018 260);
+  --color-text-muted: oklch(0.5 0.018 260);
+  --color-border: oklch(0.9 0.005 260);
+  --color-success: oklch(0.65 0.18 150);
+  --color-danger: oklch(0.62 0.22 25);
+
+  --font-display: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+html,
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,29 @@
+name = "cadeirapro-api"
+main = "src/index.ts"
+compatibility_date = "2026-05-03"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+
+# Non-secret environment variables for the deployed Worker. Real secrets
+# (SUPABASE_SERVICE_ROLE_KEY, TRANSFEERA_API_KEY, etc.) are set ONCE via
+# `wrangler secret put <NAME>` and live in Cloudflare's secret store —
+# they never appear here, never in CI logs, never in git.
+[vars]
+NODE_ENV = "staging"
+LOG_LEVEL = "info"
+IDEMPOTENCY_TTL_HOURS = "24"
+SUPABASE_URL = "https://bqjdmkodzwrdjltvghqk.supabase.co"
+# sb_publishable_* is the new-format Supabase anon key — safe to expose to
+# browsers and commit to source. RLS is the protection layer.
+SUPABASE_ANON_KEY = "sb_publishable_xas4vgYO_4YH1ucWux1MWg_-BDtkbc2"
+PLATFORM_FEE_DEFAULT_PCT = "0.005"
+PLATFORM_PIX_KEY = "00000000-0000-4000-8000-000000000000"
+PLATFORM_PIX_KEY_TYPE = "random"
+
+# Custom domain — uncomment when cadeirapro.com.br is registered + DNS configured.
+# routes = [{ pattern = "api.cadeirapro.com.br/*", custom_domain = true }]
