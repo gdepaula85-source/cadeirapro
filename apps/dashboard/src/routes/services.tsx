@@ -65,10 +65,7 @@ export function ServicesPage() {
     onError: () => setError(t.services.errors.archive),
   });
 
-  const sorted = useMemo(
-    () => servicesQuery.data ?? [],
-    [servicesQuery.data],
-  );
+  const sorted = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
 
   function edit(service: Service) {
     setError(null);
@@ -115,22 +112,31 @@ export function ServicesPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
         <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--color-border)] text-sm font-medium">
-            {servicesQuery.isLoading ? t.common.loading : `${sorted.length} ${t.services.title.toLowerCase()}`}
+            {servicesQuery.isLoading
+              ? t.common.loading
+              : `${sorted.length} ${t.services.title.toLowerCase()}`}
           </div>
           {sorted.length === 0 && !servicesQuery.isLoading ? (
             <div className="p-8 text-sm text-[var(--color-text-muted)]">{t.common.empty}</div>
           ) : (
             <div className="divide-y divide-[var(--color-border)]">
               {sorted.map((service) => (
-                <article key={service.id} className="p-4 flex flex-col sm:flex-row gap-4 sm:items-center">
+                <article
+                  key={service.id}
+                  className="p-4 flex flex-col sm:flex-row gap-4 sm:items-center"
+                >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h2 className="font-medium text-[var(--color-text)] truncate">{service.name}</h2>
-                      <span className={`text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 ${
-                        service.isActive
-                          ? 'bg-emerald-50 text-[var(--color-success)]'
-                          : 'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
-                      }`}>
+                      <h2 className="font-medium text-[var(--color-text)] truncate">
+                        {service.name}
+                      </h2>
+                      <span
+                        className={`text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 ${
+                          service.isActive
+                            ? 'bg-emerald-50 text-[var(--color-success)]'
+                            : 'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
+                        }`}
+                      >
                         {service.isActive ? t.common.active : t.common.inactive}
                       </span>
                     </div>
@@ -156,7 +162,8 @@ export function ServicesPage() {
                       <Button
                         variant="ghost"
                         onClick={() => {
-                          if (window.confirm(t.services.archiveConfirm)) archiveMutation.mutate(service.id);
+                          if (window.confirm(t.services.archiveConfirm))
+                            archiveMutation.mutate(service.id);
                         }}
                         className="px-3"
                       >

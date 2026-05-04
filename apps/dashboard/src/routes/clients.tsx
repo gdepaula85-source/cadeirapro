@@ -108,14 +108,19 @@ export function ClientsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
         <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--color-border)] text-sm font-medium">
-            {clientsQuery.isLoading ? t.common.loading : `${clients.length} ${t.clients.title.toLowerCase()}`}
+            {clientsQuery.isLoading
+              ? t.common.loading
+              : `${clients.length} ${t.clients.title.toLowerCase()}`}
           </div>
           {clients.length === 0 && !clientsQuery.isLoading ? (
             <div className="p-8 text-sm text-[var(--color-text-muted)]">{t.common.empty}</div>
           ) : (
             <div className="divide-y divide-[var(--color-border)]">
               {clients.map((client) => (
-                <article key={client.id} className="p-4 flex flex-col sm:flex-row gap-4 sm:items-center">
+                <article
+                  key={client.id}
+                  className="p-4 flex flex-col sm:flex-row gap-4 sm:items-center"
+                >
                   <div className="flex-1 min-w-0">
                     <h2 className="font-medium text-[var(--color-text)] truncate">{client.name}</h2>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-[var(--color-text-muted)]">
@@ -144,7 +149,8 @@ export function ClientsPage() {
                     <Button
                       variant="ghost"
                       onClick={() => {
-                        if (window.confirm(t.clients.archiveConfirm)) archiveMutation.mutate(client.id);
+                        if (window.confirm(t.clients.archiveConfirm))
+                          archiveMutation.mutate(client.id);
                       }}
                       className="px-3"
                     >

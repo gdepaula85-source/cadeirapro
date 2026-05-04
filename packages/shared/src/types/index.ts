@@ -14,6 +14,11 @@ import type {
   CreateClientInputSchema,
   UpdateClientInputSchema,
   ClientListQuerySchema,
+  StaffSchema,
+  StaffRoleSchema,
+  CreateStaffInputSchema,
+  UpdateStaffInputSchema,
+  StaffListQuerySchema,
 } from '../schemas';
 
 export type Organization = z.infer<typeof OrganizationSchema>;
@@ -30,3 +35,8 @@ export type Client = z.infer<typeof ClientSchema>;
 export type CreateClientInput = z.infer<typeof CreateClientInputSchema>;
 export type UpdateClientInput = z.infer<typeof UpdateClientInputSchema>;
 export type ClientListQuery = z.infer<typeof ClientListQuerySchema>;
+export type Staff = z.infer<typeof StaffSchema>;
+export type StaffRole = z.infer<typeof StaffRoleSchema>;
+export type CreateStaffInput = z.infer<typeof CreateStaffInputSchema>;
+export type UpdateStaffInput = z.infer<typeof UpdateStaffInputSchema>;
+export type StaffListQuery = z.infer<typeof StaffListQuerySchema>;

@@ -7,11 +7,14 @@ import type {
   Client,
   CreateClientInput,
   CreateServiceInput,
+  CreateStaffInput,
   Me,
   Service,
   SignUpInput,
+  Staff,
   UpdateClientInput,
   UpdateServiceInput,
+  UpdateStaffInput,
 } from '@cadeirapro/shared';
 
 const BASE = import.meta.env.VITE_API_BASE;
@@ -89,10 +92,7 @@ export const api = {
     ),
   services: {
     list: (includeInactive = false) =>
-      request<Service[]>(
-        'GET',
-        `/v1/services${includeInactive ? '?includeInactive=true' : ''}`,
-      ),
+      request<Service[]>('GET', `/v1/services${includeInactive ? '?includeInactive=true' : ''}`),
     create: (input: CreateServiceInput) =>
       request<Service>('POST', '/v1/services', input, { idempotent: true }),
     update: (id: string, input: UpdateServiceInput) =>
@@ -111,5 +111,15 @@ export const api = {
       request<{ id: string; anonymizedAt: string }>('DELETE', `/v1/clients/${id}`, undefined, {
         idempotent: true,
       }),
+  },
+  staff: {
+    list: (includeInactive = false) =>
+      request<Staff[]>('GET', `/v1/staff${includeInactive ? '?includeInactive=true' : ''}`),
+    create: (input: CreateStaffInput) =>
+      request<Staff>('POST', '/v1/staff', input, { idempotent: true }),
+    update: (id: string, input: UpdateStaffInput) =>
+      request<Staff>('PATCH', `/v1/staff/${id}`, input, { idempotent: true }),
+    archive: (id: string) =>
+      request<Staff>('DELETE', `/v1/staff/${id}`, undefined, { idempotent: true }),
   },
 };

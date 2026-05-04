@@ -9,6 +9,7 @@ import { DashboardPage } from './routes/dashboard';
 import { ClientsPage } from './routes/clients';
 import { LoginPage } from './routes/login';
 import { ServicesPage } from './routes/services';
+import { StaffPage } from './routes/staff';
 import { ForgotPasswordPage } from './routes/forgot-password';
 import { ResetPasswordPage } from './routes/reset-password';
 import { SignUpStep1Page } from './routes/signup/index';
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'clients', element: <ClientsPage /> },
       { path: 'services', element: <ServicesPage /> },
+      { path: 'staff', element: <StaffPage /> },
     ],
   },
 ]);

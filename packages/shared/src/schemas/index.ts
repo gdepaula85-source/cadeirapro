@@ -15,3 +15,10 @@ export {
   UpdateClientInputSchema,
   ClientListQuerySchema,
 } from './client';
+export {
+  StaffSchema,
+  StaffRoleSchema,
+  CreateStaffInputSchema,
+  UpdateStaffInputSchema,
+  StaffListQuerySchema,
+} from './staff';

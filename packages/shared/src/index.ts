@@ -21,6 +21,11 @@ export {
   CreateClientInputSchema,
   UpdateClientInputSchema,
   ClientListQuerySchema,
+  StaffSchema,
+  StaffRoleSchema,
+  CreateStaffInputSchema,
+  UpdateStaffInputSchema,
+  StaffListQuerySchema,
 } from './schemas';
 
 export type {
@@ -38,4 +43,9 @@ export type {
   CreateClientInput,
   UpdateClientInput,
   ClientListQuery,
+  Staff,
+  StaffRole,
+  CreateStaffInput,
+  UpdateStaffInput,
+  StaffListQuery,
 } from './types';
