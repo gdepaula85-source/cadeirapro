@@ -36,7 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/clients', label: t.nav.clients, icon: Users },
   { to: '/services', label: t.nav.services, icon: Scissors },
   { to: '/staff', label: t.nav.staff, icon: UserCheck },
-  { to: '/payments', label: t.nav.payments, icon: CreditCard, soon: true },
+  { to: '/payments', label: t.nav.payments, icon: CreditCard },
   { to: '/settings', label: t.nav.settings, icon: Settings },
 ];
 

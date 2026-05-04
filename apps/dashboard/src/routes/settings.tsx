@@ -184,6 +184,22 @@ export function SettingsPage() {
         : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
     }`;
 
+  if (meQuery.isError) {
+    return (
+      <div className="max-w-3xl mx-auto py-12">
+        <div className="flex items-start gap-2 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-4 py-3 text-sm text-[var(--color-danger)]">
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+          <div>
+            <strong>{t.settings.errors.generic}</strong>
+            <div className="text-xs mt-1 opacity-80">
+              {(meQuery.error as Error)?.message ?? 'unknown'}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!shop || !hours || !branding) {
     return (
       <div className="max-w-3xl mx-auto py-12 text-sm text-[var(--color-text-muted)]">

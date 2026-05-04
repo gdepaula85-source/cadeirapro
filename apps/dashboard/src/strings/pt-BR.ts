@@ -223,6 +223,43 @@ export const t = {
       cancel: 'Não foi possível cancelar o agendamento.',
     },
   },
+  payments: {
+    title: 'Pagamentos',
+    subtitle:
+      'Receita projetada por agendamento — com a divisão entre loja, barbeiro e plataforma. Pix em tempo real chega no Sprint 3.',
+    kpis: {
+      today: 'Hoje',
+      week: 'Últimos 7 dias',
+      period: 'Últimos 30 dias',
+      pending: 'Confirmados (futuro)',
+      bookings: 'agendamentos',
+    },
+    splitTitle: 'Divisão estimada — últimos 30 dias',
+    splitNote: 'Calculado com a comissão atual de cada barbeiro.',
+    splitParts: {
+      shop: 'Loja',
+      barber: 'Barbeiros',
+      platform: 'Plataforma',
+    },
+    recentBookings: 'agendamentos no período',
+    last30: 'Últimos 30 dias',
+    cols: {
+      when: 'Data',
+      client: 'Cliente',
+      barber: 'Barbeiro',
+      service: 'Serviço',
+      total: 'Total',
+      shop: 'Loja',
+      barberShare: 'Barbeiro',
+      platform: 'Plataforma',
+      status: 'Status',
+    },
+    s3Note:
+      'Em Sprint 3: cada agendamento gera um QR Code Pix com split automático para loja, barbeiro e plataforma no momento do pagamento. Esta tela passa a refletir transações reais.',
+    errors: {
+      generic: 'Não foi possível carregar os pagamentos.',
+    },
+  },
   settings: {
     title: 'Configurações',
     subtitle: 'Atualize informações da loja, horário de atendimento e identidade visual.',

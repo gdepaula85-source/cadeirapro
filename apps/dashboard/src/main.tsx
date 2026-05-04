@@ -9,6 +9,7 @@ import { DashboardPage } from './routes/dashboard';
 import { CalendarPage } from './routes/calendar';
 import { ClientsPage } from './routes/clients';
 import { LoginPage } from './routes/login';
+import { PaymentsPage } from './routes/payments';
 import { ServicesPage } from './routes/services';
 import { SettingsPage } from './routes/settings';
 import { StaffPage } from './routes/staff';
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
       { path: 'clients', element: <ClientsPage /> },
       { path: 'services', element: <ServicesPage /> },
       { path: 'staff', element: <StaffPage /> },
+      { path: 'payments', element: <PaymentsPage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
   },
