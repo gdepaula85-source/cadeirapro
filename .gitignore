@@ -34,3 +34,8 @@ coverage/
 
 # vite cache
 .vite/
+
+# supabase cli local cache (per-machine, not per-project)
+supabase/.temp/
+supabase/.branches/
+
