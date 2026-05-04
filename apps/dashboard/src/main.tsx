@@ -6,6 +6,7 @@ import { AuthProvider } from './lib/auth';
 import { queryClient } from './lib/query';
 import { DashboardLayout } from './routes/_layout';
 import { DashboardPage } from './routes/dashboard';
+import { CalendarPage } from './routes/calendar';
 import { ClientsPage } from './routes/clients';
 import { LoginPage } from './routes/login';
 import { ServicesPage } from './routes/services';
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
     element: <DashboardLayout />,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: 'calendar', element: <CalendarPage /> },
       { path: 'clients', element: <ClientsPage /> },
       { path: 'services', element: <ServicesPage /> },
       { path: 'staff', element: <StaffPage /> },

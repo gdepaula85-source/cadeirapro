@@ -4,7 +4,12 @@
 import { v4 as uuid } from 'uuid';
 import { supabase } from './supabase';
 import type {
+  AvailabilityQuery,
+  AvailabilitySlot,
+  Booking,
+  BookingListQuery,
   Client,
+  CreateBookingInput,
   CreateClientInput,
   CreateServiceInput,
   CreateStaffInput,
@@ -12,6 +17,7 @@ import type {
   Service,
   SignUpInput,
   Staff,
+  UpdateBookingInput,
   UpdateClientInput,
   UpdateServiceInput,
   UpdateStaffInput,
@@ -121,5 +127,30 @@ export const api = {
       request<Staff>('PATCH', `/v1/staff/${id}`, input, { idempotent: true }),
     archive: (id: string) =>
       request<Staff>('DELETE', `/v1/staff/${id}`, undefined, { idempotent: true }),
+  },
+  bookings: {
+    list: (query: BookingListQuery) => {
+      const params = new URLSearchParams();
+      params.set('from', query.from);
+      params.set('to', query.to);
+      if (query.barberId) params.set('barberId', query.barberId);
+      if (query.status) params.set('status', query.status);
+      return request<Booking[]>('GET', `/v1/bookings?${params.toString()}`);
+    },
+    create: (input: CreateBookingInput) =>
+      request<Booking>('POST', '/v1/bookings', input, { idempotent: true }),
+    update: (id: string, input: UpdateBookingInput) =>
+      request<Booking>('PATCH', `/v1/bookings/${id}`, input, { idempotent: true }),
+    cancel: (id: string) =>
+      request<Booking>('DELETE', `/v1/bookings/${id}`, undefined, { idempotent: true }),
+  },
+  availability: {
+    list: (query: AvailabilityQuery) => {
+      const params = new URLSearchParams();
+      params.set('serviceId', query.serviceId);
+      params.set('barberId', query.barberId);
+      params.set('date', query.date);
+      return request<AvailabilitySlot[]>('GET', `/v1/availability?${params.toString()}`);
+    },
   },
 };

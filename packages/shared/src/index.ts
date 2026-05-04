@@ -26,6 +26,14 @@ export {
   CreateStaffInputSchema,
   UpdateStaffInputSchema,
   StaffListQuerySchema,
+  BookingSchema,
+  BookingStatusSchema,
+  BookingSourceSchema,
+  CreateBookingInputSchema,
+  UpdateBookingInputSchema,
+  BookingListQuerySchema,
+  AvailabilityQuerySchema,
+  AvailabilitySlotSchema,
 } from './schemas';
 
 export type {
@@ -48,4 +56,12 @@ export type {
   CreateStaffInput,
   UpdateStaffInput,
   StaffListQuery,
+  Booking,
+  BookingStatus,
+  BookingSource,
+  CreateBookingInput,
+  UpdateBookingInput,
+  BookingListQuery,
+  AvailabilityQuery,
+  AvailabilitySlot,
 } from './types';

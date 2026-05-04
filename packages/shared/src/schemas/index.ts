@@ -22,3 +22,13 @@ export {
   UpdateStaffInputSchema,
   StaffListQuerySchema,
 } from './staff';
+export {
+  BookingSchema,
+  BookingStatusSchema,
+  BookingSourceSchema,
+  CreateBookingInputSchema,
+  UpdateBookingInputSchema,
+  BookingListQuerySchema,
+  AvailabilityQuerySchema,
+  AvailabilitySlotSchema,
+} from './booking';

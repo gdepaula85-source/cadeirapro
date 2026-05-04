@@ -19,6 +19,14 @@ import type {
   CreateStaffInputSchema,
   UpdateStaffInputSchema,
   StaffListQuerySchema,
+  BookingSchema,
+  BookingStatusSchema,
+  BookingSourceSchema,
+  CreateBookingInputSchema,
+  UpdateBookingInputSchema,
+  BookingListQuerySchema,
+  AvailabilityQuerySchema,
+  AvailabilitySlotSchema,
 } from '../schemas';
 
 export type Organization = z.infer<typeof OrganizationSchema>;
@@ -40,3 +48,11 @@ export type StaffRole = z.infer<typeof StaffRoleSchema>;
 export type CreateStaffInput = z.infer<typeof CreateStaffInputSchema>;
 export type UpdateStaffInput = z.infer<typeof UpdateStaffInputSchema>;
 export type StaffListQuery = z.infer<typeof StaffListQuerySchema>;
+export type Booking = z.infer<typeof BookingSchema>;
+export type BookingStatus = z.infer<typeof BookingStatusSchema>;
+export type BookingSource = z.infer<typeof BookingSourceSchema>;
+export type CreateBookingInput = z.infer<typeof CreateBookingInputSchema>;
+export type UpdateBookingInput = z.infer<typeof UpdateBookingInputSchema>;
+export type BookingListQuery = z.infer<typeof BookingListQuerySchema>;
+export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>;
+export type AvailabilitySlot = z.infer<typeof AvailabilitySlotSchema>;
