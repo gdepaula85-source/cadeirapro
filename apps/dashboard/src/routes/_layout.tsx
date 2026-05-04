@@ -19,7 +19,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import { ThemeApplier } from '../components/ThemeApplier';
 import { t } from '../strings/pt-BR';
+import type { ThemeConfig } from '@cadeirapro/shared';
 
 interface NavItem {
   to: string;
@@ -35,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/services', label: t.nav.services, icon: Scissors },
   { to: '/staff', label: t.nav.staff, icon: UserCheck },
   { to: '/payments', label: t.nav.payments, icon: CreditCard, soon: true },
-  { to: '/settings', label: t.nav.settings, icon: Settings, soon: true },
+  { to: '/settings', label: t.nav.settings, icon: Settings },
 ];
 
 interface NavProps {
@@ -146,6 +148,7 @@ export function DashboardLayout() {
   if (!session) return <Navigate to="/login" replace />;
 
   const shopName = meQuery.data?.organization.name ?? '';
+  const themeConfig = (meQuery.data?.organization.themeConfig ?? null) as ThemeConfig | null;
   const userInitials =
     shopName
       .split(/\s+/)
@@ -157,6 +160,7 @@ export function DashboardLayout() {
 
   return (
     <div className="min-h-screen flex bg-[var(--color-background)]">
+      <ThemeApplier themeConfig={themeConfig} />
       {/* Permanent sidebar (md+) */}
       <aside className="w-60 shrink-0 border-r border-[var(--color-border)] bg-[var(--color-surface)] hidden md:flex md:flex-col">
         <NavContent onSignOut={() => signOut()} />

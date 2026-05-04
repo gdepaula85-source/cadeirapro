@@ -32,3 +32,9 @@ export {
   AvailabilityQuerySchema,
   AvailabilitySlotSchema,
 } from './booking';
+export {
+  UpdateOrganizationInputSchema,
+  HoursMapSchema,
+  HoursWindowSchema,
+  ThemeConfigSchema,
+} from './organization-update';

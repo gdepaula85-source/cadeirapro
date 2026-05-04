@@ -10,6 +10,7 @@ import { CalendarPage } from './routes/calendar';
 import { ClientsPage } from './routes/clients';
 import { LoginPage } from './routes/login';
 import { ServicesPage } from './routes/services';
+import { SettingsPage } from './routes/settings';
 import { StaffPage } from './routes/staff';
 import { ForgotPasswordPage } from './routes/forgot-password';
 import { ResetPasswordPage } from './routes/reset-password';
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
       { path: 'clients', element: <ClientsPage /> },
       { path: 'services', element: <ServicesPage /> },
       { path: 'staff', element: <StaffPage /> },
+      { path: 'settings', element: <SettingsPage /> },
     ],
   },
 ]);

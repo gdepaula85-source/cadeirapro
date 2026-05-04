@@ -27,6 +27,10 @@ import type {
   BookingListQuerySchema,
   AvailabilityQuerySchema,
   AvailabilitySlotSchema,
+  UpdateOrganizationInputSchema,
+  HoursMapSchema,
+  HoursWindowSchema,
+  ThemeConfigSchema,
 } from '../schemas';
 
 export type Organization = z.infer<typeof OrganizationSchema>;
@@ -56,3 +60,7 @@ export type UpdateBookingInput = z.infer<typeof UpdateBookingInputSchema>;
 export type BookingListQuery = z.infer<typeof BookingListQuerySchema>;
 export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>;
 export type AvailabilitySlot = z.infer<typeof AvailabilitySlotSchema>;
+export type UpdateOrganizationInput = z.infer<typeof UpdateOrganizationInputSchema>;
+export type HoursMap = z.infer<typeof HoursMapSchema>;
+export type HoursWindow = z.infer<typeof HoursWindowSchema>;
+export type ThemeConfig = z.infer<typeof ThemeConfigSchema>;

@@ -34,6 +34,10 @@ export {
   BookingListQuerySchema,
   AvailabilityQuerySchema,
   AvailabilitySlotSchema,
+  UpdateOrganizationInputSchema,
+  HoursMapSchema,
+  HoursWindowSchema,
+  ThemeConfigSchema,
 } from './schemas';
 
 export type {
@@ -64,4 +68,8 @@ export type {
   BookingListQuery,
   AvailabilityQuery,
   AvailabilitySlot,
+  UpdateOrganizationInput,
+  HoursMap,
+  HoursWindow,
+  ThemeConfig,
 } from './types';

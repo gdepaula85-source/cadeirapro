@@ -13,6 +13,7 @@ import { clientsRouter } from './routes/clients';
 import { staffRouter } from './routes/staff';
 import { bookingsRouter } from './routes/bookings';
 import { availabilityRouter } from './routes/availability';
+import { organizationRouter } from './routes/organization';
 
 const app = new Hono<AppEnv>();
 
@@ -32,6 +33,7 @@ app.route('/', clientsRouter);
 app.route('/', staffRouter);
 app.route('/', bookingsRouter);
 app.route('/', availabilityRouter);
+app.route('/', organizationRouter);
 
 // 404 fallback.
 app.notFound((c) => c.json({ error: { code: 'not_found' } }, 404));

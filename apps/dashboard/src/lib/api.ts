@@ -14,11 +14,13 @@ import type {
   CreateServiceInput,
   CreateStaffInput,
   Me,
+  Organization,
   Service,
   SignUpInput,
   Staff,
   UpdateBookingInput,
   UpdateClientInput,
+  UpdateOrganizationInput,
   UpdateServiceInput,
   UpdateStaffInput,
 } from '@cadeirapro/shared';
@@ -152,5 +154,9 @@ export const api = {
       params.set('date', query.date);
       return request<AvailabilitySlot[]>('GET', `/v1/availability?${params.toString()}`);
     },
+  },
+  organization: {
+    update: (input: UpdateOrganizationInput) =>
+      request<Organization>('PATCH', '/v1/organization', input, { idempotent: true }),
   },
 };
