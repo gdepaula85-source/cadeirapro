@@ -14,12 +14,14 @@ import type {
   CreateScheduleBlockInput,
   CreateServiceInput,
   CreateStaffInput,
+  CreateReviewInput,
   CustomerMe,
   CustomerSignUpInput,
   CustomerSignUpResponse,
   DashboardKpis,
   Me,
   Organization,
+  Review,
   ScheduleBlock,
   ScheduleBlockListQuery,
   Service,
@@ -200,6 +202,8 @@ export const api = {
       ),
     /** Auth-gated — Authorization header carries the customer's JWT. */
     me: () => request<CustomerMe>('GET', '/v1/customer/me'),
+    createReview: (input: CreateReviewInput) =>
+      request<Review>('POST', '/v1/customer/reviews', input, { idempotent: true }),
   },
   public: {
     org: (slug: string) =>
@@ -274,6 +278,8 @@ export interface PublicBarber {
   displayName: string;
   avatarUrl: string | null;
   bio: string | null;
+  ratingCount: number;
+  ratingAverage: number | null;
 }
 
 export interface PublicBookingInput {

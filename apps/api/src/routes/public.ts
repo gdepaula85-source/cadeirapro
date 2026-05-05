@@ -115,7 +115,7 @@ publicRouter.get(
 
     let db = supabase
       .from('public_barbers')
-      .select('id, organization_id, display_name, avatar_url, bio')
+      .select('id, organization_id, display_name, avatar_url, bio, rating_count, rating_average')
       .eq('organization_id', org.id)
       .order('display_name', { ascending: true });
 
@@ -505,5 +505,7 @@ function barberToCamel(row: Record<string, unknown>) {
     displayName: row.display_name as string,
     avatarUrl: (row.avatar_url as string | null) ?? null,
     bio: (row.bio as string | null) ?? null,
+    ratingCount: (row.rating_count as number | null) ?? 0,
+    ratingAverage: (row.rating_average as number | null) ?? null,
   };
 }

@@ -8,7 +8,7 @@
 // this without a session is redirected to /[slug]/welcome.
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, LogOut } from 'lucide-react';
+import { CalendarDays, LogOut, UserRound } from 'lucide-react';
 import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 
@@ -83,16 +83,22 @@ export function CustomerHomePage() {
           </Link>
         </section>
 
-        {/* Placeholders for the full home design — featured barbers, categories,
-            agenda, loyalty card, referral promo. Each is its own follow-up
-            commit gated on schema + API support. */}
-        <section className="mt-6 rounded-[28px] border border-dashed border-[#dfe7dc] bg-white/60 p-5 text-center">
-          <p className="text-sm font-medium text-[#647067]">
-            Mais funcionalidades chegando em breve
-          </p>
-          <p className="mt-1 text-xs text-[#98a59b]">
-            Histórico, programa de fidelidade, indicações e avaliações.
-          </p>
+        <section className="mt-6 rounded-[28px] border border-[#dfe7dc] bg-white p-5 shadow-[0_14px_36px_rgb(25_38_28_/_0.06)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#edf7e9] text-[#176527]">
+              <UserRound size={20} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-[#101713]">Seu perfil</p>
+              <p className="text-xs text-[#647067]">Historico, gastos e proximos horarios.</p>
+            </div>
+          </div>
+          <Link
+            to={`/${slug}/profile`}
+            className="mt-5 block w-full rounded-2xl border border-[#dfe7dc] bg-white py-3 text-center text-sm font-semibold text-[#176527] transition hover:border-[#176527]"
+          >
+            Ver meu historico
+          </Link>
         </section>
       </div>
     </main>

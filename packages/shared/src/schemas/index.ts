@@ -38,6 +38,7 @@ export {
   UpdateScheduleBlockInputSchema,
   ScheduleBlockListQuerySchema,
 } from './schedule-block';
+export { ReviewSchema, CreateReviewInputSchema } from './review';
 export {
   UpdateOrganizationInputSchema,
   HoursMapSchema,

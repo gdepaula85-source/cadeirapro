@@ -496,7 +496,8 @@ function BarberStep({
                   }`}
                 >
                   <Star size={13} className="fill-current" />
-                  <span>4,9</span>
+                  <span>{barber.ratingAverage ? formatRating(barber.ratingAverage) : '--'}</span>
+                  {barber.ratingCount > 0 ? <span>({barber.ratingCount})</span> : null}
                 </div>
               </div>
             </div>
@@ -769,6 +770,13 @@ function formatTime(value: string) {
     minute: '2-digit',
     timeZone: 'America/Sao_Paulo',
   }).format(new Date(value));
+}
+
+function formatRating(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 function formatDateTime(value: string) {

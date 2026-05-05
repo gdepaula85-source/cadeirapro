@@ -36,6 +36,10 @@ const CustomerSignUpPage = lazyNamed(
   'CustomerSignUpPage',
 );
 const CustomerHomePage = lazyNamed(() => import('./routes/customer/home'), 'CustomerHomePage');
+const CustomerProfilePage = lazyNamed(
+  () => import('./routes/customer/profile'),
+  'CustomerProfilePage',
+);
 
 function lazyNamed<T extends Record<string, ComponentType>>(
   loader: () => Promise<T>,
@@ -75,6 +79,7 @@ const router = createBrowserRouter([
   { path: '/:slug/welcome', element: routeElement(CustomerWelcomePage) },
   { path: '/:slug/login', element: routeElement(CustomerLoginPage) },
   { path: '/:slug/signup', element: routeElement(CustomerSignUpPage) },
+  { path: '/:slug/profile', element: routeElement(CustomerProfilePage) },
   { path: '/:slug', element: routeElement(CustomerHomePage) },
 
   {

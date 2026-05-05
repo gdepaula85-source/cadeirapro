@@ -31,6 +31,8 @@ import type {
   CreateScheduleBlockInputSchema,
   UpdateScheduleBlockInputSchema,
   ScheduleBlockListQuerySchema,
+  ReviewSchema,
+  CreateReviewInputSchema,
   UpdateOrganizationInputSchema,
   HoursMapSchema,
   HoursWindowSchema,
@@ -68,6 +70,8 @@ export type ScheduleBlock = z.infer<typeof ScheduleBlockSchema>;
 export type CreateScheduleBlockInput = z.infer<typeof CreateScheduleBlockInputSchema>;
 export type UpdateScheduleBlockInput = z.infer<typeof UpdateScheduleBlockInputSchema>;
 export type ScheduleBlockListQuery = z.infer<typeof ScheduleBlockListQuerySchema>;
+export type Review = z.infer<typeof ReviewSchema>;
+export type CreateReviewInput = z.infer<typeof CreateReviewInputSchema>;
 export type UpdateOrganizationInput = z.infer<typeof UpdateOrganizationInputSchema>;
 export type HoursMap = z.infer<typeof HoursMapSchema>;
 export type HoursWindow = z.infer<typeof HoursWindowSchema>;
@@ -108,10 +112,35 @@ export interface CustomerOrganization {
   whatsappPhone: string | null;
 }
 
+export interface CustomerBookingSummary {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: BookingStatus;
+  source: BookingSource;
+  serviceName: string | null;
+  serviceDurationMinutes: number | null;
+  servicePriceCents: number | null;
+  barberName: string | null;
+  reviewId: string | null;
+  reviewRating: number | null;
+}
+
+export interface CustomerHistoryStats {
+  totalBookings: number;
+  completedBookings: number;
+  upcomingBookings: number;
+  totalSpentCents: number;
+  memberSince: string;
+}
+
 /** Response shape of GET /v1/customer/me. */
 export interface CustomerMe {
   customer: CustomerProfile;
   organization: CustomerOrganization;
+  stats: CustomerHistoryStats;
+  upcomingBookings: CustomerBookingSummary[];
+  pastBookings: CustomerBookingSummary[];
 }
 
 /** Body shape of POST /v1/public/orgs/:slug/customer/sign-up. */
