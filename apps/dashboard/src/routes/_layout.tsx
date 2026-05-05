@@ -18,7 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { ThemeApplier } from '../components/ThemeApplier';
 import { t } from '../strings/pt-BR';
 import type { ThemeConfig } from '@cadeirapro/shared';
@@ -138,6 +138,14 @@ export function DashboardLayout() {
     enabled: !!session,
   });
 
+  useEffect(() => {
+    const err = meQuery.error;
+    if (!(err instanceof ApiError)) return;
+    if (err.code === 'claims_missing' || err.code === 'unauthorized') {
+      signOut();
+    }
+  }, [meQuery.error, signOut]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-sm text-[var(--color-text-muted)]">
@@ -220,7 +228,11 @@ export function DashboardLayout() {
             </div>
           </div>
         </header>
-        {meQuery.isError ? (
+        {meQuery.isError &&
+        !(
+          meQuery.error instanceof ApiError &&
+          (meQuery.error.code === 'claims_missing' || meQuery.error.code === 'unauthorized')
+        ) ? (
           <div className="m-4 md:m-6 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-4 py-3 text-sm text-[var(--color-danger)]">
             <strong>Falha ao carregar /v1/me:</strong>{' '}
             {(meQuery.error as Error)?.message ?? 'erro desconhecido'}

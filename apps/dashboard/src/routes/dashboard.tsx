@@ -1,7 +1,7 @@
 // Empty dashboard with shop name + four placeholder KPI tiles + getting-
 // started callout. SPRINT_1 §10 demo target met by this page; real KPI
 // values + booking entry points land in S2.
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
@@ -59,7 +59,7 @@ interface NextStep {
   body: string;
   icon: LucideIcon;
   cta: string;
-  soon: true;
+  to: string;
 }
 
 const NEXT_STEPS: NextStep[] = [
@@ -67,29 +67,29 @@ const NEXT_STEPS: NextStep[] = [
     title: 'Cadastre seus serviços',
     body: 'Defina os cortes oferecidos, duração e preço. Cada serviço alimenta o agendamento.',
     icon: Scissors,
-    cta: 'Em breve',
-    soon: true,
+    cta: 'Abrir serviços',
+    to: '/services',
   },
   {
     title: 'Adicione sua equipe',
     body: 'Cadastre barbeiros parceiros com a chave Pix de cada um para o split automático.',
     icon: Users,
-    cta: 'Em breve',
-    soon: true,
+    cta: 'Abrir equipe',
+    to: '/staff',
   },
   {
     title: 'Configure seu horário',
     body: 'Defina os dias e janelas de atendimento. Os clientes só verão os horários disponíveis.',
     icon: CalendarPlus,
-    cta: 'Em breve',
-    soon: true,
+    cta: 'Abrir configurações',
+    to: '/settings',
   },
   {
     title: 'Conecte o Pix',
     body: 'Receba via QR Code com split em tempo real entre loja, barbeiro e plataforma.',
     icon: CreditCard,
-    cta: 'Em breve',
-    soon: true,
+    cta: 'Abrir pagamentos',
+    to: '/payments',
   },
 ];
 
@@ -108,7 +108,10 @@ export function DashboardPage() {
           {t.dashboard.greeting}
           {shopName ? `, ${shopName}` : ''}
         </h1>
-        <p className="text-sm text-[var(--color-text-muted)] max-w-2xl">{t.dashboard.sprintNote}</p>
+        <p className="text-sm text-[var(--color-text-muted)] max-w-2xl">
+          Serviços, equipe, agenda, pagamentos e configurações já estão conectados para operar a
+          barbearia.
+        </p>
       </header>
 
       {/* KPI tiles */}
@@ -158,9 +161,10 @@ export function DashboardPage() {
           {NEXT_STEPS.map((step) => {
             const Icon = step.icon;
             return (
-              <div
+              <Link
                 key={step.title}
-                className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 flex gap-4 items-start"
+                to={step.to}
+                className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-4 flex gap-4 items-start transition-shadow hover:shadow-sm"
               >
                 <div
                   className="h-9 w-9 shrink-0 rounded-md flex items-center justify-center text-[var(--color-text)]"
@@ -179,7 +183,7 @@ export function DashboardPage() {
                     <ArrowRight size={11} />
                   </span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
