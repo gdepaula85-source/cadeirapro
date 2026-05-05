@@ -17,6 +17,7 @@ export const ClientSchema = z.object({
   phone: z.string().regex(E164_RE),
   name: z.string().min(1).max(80),
   email: z.string().email().nullable().optional(),
+  authUserId: z.string().uuid().nullable().optional(),
   lgpdConsentAt: z.string().datetime().nullable().optional(),
   anonymizedAt: z.string().datetime().nullable().optional(),
   notes: z.string().nullable().optional(),

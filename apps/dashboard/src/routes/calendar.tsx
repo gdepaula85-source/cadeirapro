@@ -87,6 +87,7 @@ interface BookingFormState {
   clientId: string;
   startsAt: string; // ISO UTC
   startsAtLocal: string;
+  status: BookingStatus;
   notes: string;
 }
 
@@ -97,6 +98,7 @@ const emptyBookingForm: BookingFormState = {
   clientId: '',
   startsAt: '',
   startsAtLocal: '',
+  status: 'confirmed',
   notes: '',
 };
 
@@ -134,10 +136,13 @@ export function CalendarPage() {
   const qc = useQueryClient();
   const [date, setDate] = useState<string>(ymdToday());
   const [selectedBarberId, setSelectedBarberId] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>('all');
   const [bookingFormOpen, setBookingFormOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState<BookingFormState>(emptyBookingForm);
   const [blockFormOpen, setBlockFormOpen] = useState(false);
-  const [blockForm, setBlockForm] = useState<BlockFormState>(() => defaultBlockForm(ymdToday(), ''));
+  const [blockForm, setBlockForm] = useState<BlockFormState>(() =>
+    defaultBlockForm(ymdToday(), ''),
+  );
   const [error, setError] = useState<string | null>(null);
 
   const staffQuery = useQuery({ queryKey: ['staff', false], queryFn: () => api.staff.list(false) });
@@ -190,11 +195,30 @@ export function CalendarPage() {
         const d = String(local.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}` === date;
       })
+      .filter((b) => statusFilter === 'all' || b.status === statusFilter)
       .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  }, [bookingsQuery.data, date, statusFilter]);
+
+  const dayBookingsUnfiltered = useMemo(() => {
+    const all = bookingsQuery.data ?? [];
+    return all
+      .filter((b) => b.status !== 'cancelled')
+      .filter((b) => {
+        const local = new Date(b.startsAt);
+        const y = local.getFullYear();
+        const m = String(local.getMonth() + 1).padStart(2, '0');
+        const d = String(local.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}` === date;
+      });
   }, [bookingsQuery.data, date]);
 
   const availabilityQuery = useQuery({
-    queryKey: ['availability', bookingForm.barberId || selectedBarberId, bookingForm.serviceId, date],
+    queryKey: [
+      'availability',
+      bookingForm.barberId || selectedBarberId,
+      bookingForm.serviceId,
+      date,
+    ],
     queryFn: () =>
       api.availability.list({
         barberId: bookingForm.barberId || selectedBarberId,
@@ -242,6 +266,7 @@ export function CalendarPage() {
         barberId: bookingForm.barberId,
         serviceId: bookingForm.serviceId,
         startsAt: localInputToIso(bookingForm.startsAtLocal),
+        status: bookingForm.status,
         notes: bookingForm.notes || null,
       });
     },
@@ -338,6 +363,7 @@ export function CalendarPage() {
       clientId: booking.clientId,
       startsAt: booking.startsAt,
       startsAtLocal: isoToLocalInput(booking.startsAt),
+      status: booking.status,
       notes: booking.notes ?? '',
     });
     setBookingFormOpen(true);
@@ -453,6 +479,12 @@ export function CalendarPage() {
         </div>
       </div>
 
+      <CalendarSummary
+        bookings={dayBookingsUnfiltered}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+      />
+
       {dependenciesMissing ? (
         <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm text-[var(--color-text-muted)] space-y-1">
           {barbers.length === 0 ? <div>• {t.calendar.noBarbers}</div> : null}
@@ -553,7 +585,9 @@ function ScheduleBlocksPanel({
                   })}
                 </div>
                 <div className="text-xs text-[var(--color-text-muted)] truncate">
-                  {block.barberId ? (block.barberName ?? t.calendar.barber) : t.calendar.blocks.shopWide}
+                  {block.barberId
+                    ? (block.barberName ?? t.calendar.barber)
+                    : t.calendar.blocks.shopWide}
                   {block.reason ? ` · ${block.reason}` : ''}
                 </div>
               </div>
@@ -569,6 +603,66 @@ function ScheduleBlocksPanel({
         </div>
       )}
     </section>
+  );
+}
+
+function CalendarSummary({
+  bookings,
+  statusFilter,
+  onStatusFilterChange,
+}: {
+  bookings: Booking[];
+  statusFilter: BookingStatus | 'all';
+  onStatusFilterChange: (status: BookingStatus | 'all') => void;
+}) {
+  const revenue = bookings
+    .filter((booking) => booking.status === 'completed')
+    .reduce((sum, booking) => sum + (booking.servicePriceCents ?? 0), 0);
+  const upcoming = bookings.filter(
+    (booking) => booking.status === 'pending' || booking.status === 'confirmed',
+  ).length;
+  const completed = bookings.filter((booking) => booking.status === 'completed').length;
+  const noShow = bookings.filter((booking) => booking.status === 'no_show').length;
+
+  return (
+    <section className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+      <div className="grid gap-3 sm:grid-cols-4">
+        <SummaryCard label={t.calendar.summary.total} value={String(bookings.length)} />
+        <SummaryCard label={t.calendar.summary.upcoming} value={String(upcoming)} />
+        <SummaryCard label={t.calendar.summary.completed} value={String(completed)} />
+        <SummaryCard label={t.calendar.summary.revenue} value={formatBRL(revenue)} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {(['all', 'pending', 'confirmed', 'completed', 'no_show'] as const).map((status) => (
+          <button
+            key={status}
+            type="button"
+            onClick={() => onStatusFilterChange(status)}
+            className={`rounded-md border px-3 py-2 text-xs font-medium transition ${
+              statusFilter === status
+                ? 'border-[var(--color-primary)] bg-[var(--color-surface-muted)] text-[var(--color-text)]'
+                : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+            }`}
+          >
+            {status === 'all' ? t.calendar.summary.all : t.calendar.status[status]}
+          </button>
+        ))}
+        {noShow > 0 ? (
+          <span className="rounded-md bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800">
+            {noShow} {t.calendar.status.no_show}
+          </span>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+      <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)]">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-[var(--color-text)]">{value}</p>
+    </div>
   );
 }
 
@@ -828,9 +922,7 @@ function BookingFormModal({
           <SelectField
             label={t.calendar.booking.barber}
             value={form.barberId}
-            onChange={(e) =>
-              setForm({ ...form, barberId: e.currentTarget.value, startsAt: '' })
-            }
+            onChange={(e) => setForm({ ...form, barberId: e.currentTarget.value, startsAt: '' })}
             options={[
               { value: '', label: t.calendar.selectBarber },
               ...barbers.map((b) => ({ value: b.id, label: b.displayName })),
@@ -864,12 +956,28 @@ function BookingFormModal({
             ]}
           />
           {isEditing ? (
-            <Field
-              label={t.calendar.booking.startsAt}
-              type="datetime-local"
-              value={form.startsAtLocal}
-              onChange={(e) => setForm({ ...form, startsAtLocal: e.currentTarget.value })}
-            />
+            <>
+              <Field
+                label={t.calendar.booking.startsAt}
+                type="datetime-local"
+                value={form.startsAtLocal}
+                onChange={(e) => setForm({ ...form, startsAtLocal: e.currentTarget.value })}
+              />
+              <SelectField
+                label={t.calendar.booking.status}
+                value={form.status}
+                onChange={(e) =>
+                  setForm({ ...form, status: e.currentTarget.value as BookingStatus })
+                }
+                options={[
+                  { value: 'pending', label: t.calendar.status.pending },
+                  { value: 'confirmed', label: t.calendar.status.confirmed },
+                  { value: 'completed', label: t.calendar.status.completed },
+                  { value: 'no_show', label: t.calendar.status.no_show },
+                  { value: 'cancelled', label: t.calendar.status.cancelled },
+                ]}
+              />
+            </>
           ) : (
             <SelectField
               label={t.calendar.booking.slot}

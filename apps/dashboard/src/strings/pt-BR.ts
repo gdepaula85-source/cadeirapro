@@ -149,6 +149,7 @@ export const t = {
       generic: 'Não foi possível salvar o cliente.',
       archive: 'Não foi possível arquivar o cliente.',
       duplicate: 'Já existe um cliente com este telefone.',
+      validation: 'Confira nome, telefone em E.164 e e-mail antes de salvar.',
     },
   },
   staff: {
@@ -218,6 +219,7 @@ export const t = {
       barber: 'Barbeiro',
       slot: 'Horário disponível',
       startsAt: 'Data e horário',
+      status: 'Status',
       notes: 'Observações',
       submit: 'Confirmar',
       update: 'Salvar alterações',
@@ -225,6 +227,13 @@ export const t = {
       pickService: 'Selecione um serviço',
       pickClient: 'Selecione um cliente',
       pickSlot: 'Escolha um horário',
+    },
+    summary: {
+      total: 'Total do dia',
+      upcoming: 'Em aberto',
+      completed: 'Concluídos',
+      revenue: 'Receita concluída',
+      all: 'Todos',
     },
     blocks: {
       title: 'Bloqueios de agenda',

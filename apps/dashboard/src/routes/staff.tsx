@@ -1,10 +1,11 @@
 // Staff (barbeiros + atendentes) CRUD — owner-only writes. Mirrors the
 // services / clients pattern: list on the left, edit form on the right.
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AtSign,
   CalendarDays,
+  Clock3,
   KeyRound,
   Mail,
   Pencil,
@@ -14,6 +15,7 @@ import {
   UserCheck,
   UserX,
   Users,
+  Star,
 } from 'lucide-react';
 import type {
   CreateStaffInput,
@@ -77,6 +79,7 @@ export function StaffPage() {
   const qc = useQueryClient();
   const [includeInactive, setIncludeInactive] = useState(false);
   const [form, setForm] = useState<StaffFormState>(emptyForm);
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const staffQuery = useQuery({
@@ -88,6 +91,7 @@ export function StaffPage() {
     queryFn: () => api.services.list(false),
   });
   const meQuery = useQuery({ queryKey: ['me'], queryFn: api.me });
+  const reviewsQuery = useQuery({ queryKey: ['reviews'], queryFn: api.reviews.list });
 
   const saveMutation = useMutation({
     mutationFn: async (state: StaffFormState) => {
@@ -95,7 +99,7 @@ export function StaffPage() {
       if (state.id) {
         return api.staff.update(state.id, {
           displayName: state.displayName,
-          phone: state.phone || null,
+          phone: normalizeOptionalPhone(state.phone),
           email: state.email,
           bio: state.bio || null,
           pixKey: state.pixKey || null,
@@ -111,7 +115,7 @@ export function StaffPage() {
         email: state.email,
         role: state.role,
         displayName: state.displayName,
-        phone: state.phone || null,
+        phone: normalizeOptionalPhone(state.phone),
         bio: state.bio || null,
         pixKey: state.pixKey || null,
         pixKeyType: state.pixKey && state.pixKeyType ? state.pixKeyType : null,
@@ -147,9 +151,11 @@ export function StaffPage() {
   });
 
   const sorted = useMemo(() => staffQuery.data ?? [], [staffQuery.data]);
+  const selectedStaff = sorted.find((member) => member.id === selectedStaffId) ?? null;
 
   function edit(member: Staff) {
     setError(null);
+    setSelectedStaffId(member.id);
     setForm({
       id: member.id,
       email: member.email ?? '',
@@ -252,9 +258,15 @@ export function StaffPage() {
               {sorted.map((member) => (
                 <article
                   key={member.id}
-                  className="p-4 flex flex-col sm:flex-row gap-4 sm:items-center"
+                  className={`p-4 flex flex-col sm:flex-row gap-4 sm:items-center transition ${
+                    selectedStaffId === member.id ? 'bg-[var(--color-surface-muted)]' : ''
+                  }`}
                 >
-                  <div className="flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStaffId(member.id)}
+                    className="flex-1 min-w-0 text-left"
+                  >
                     <div className="flex items-center gap-2">
                       <h2 className="font-medium text-[var(--color-text)] truncate">
                         {member.displayName}
@@ -311,7 +323,7 @@ export function StaffPage() {
                         <code className="text-[var(--color-text)] font-mono">{member.pixKey}</code>
                       </div>
                     ) : null}
-                  </div>
+                  </button>
                   <div className="flex gap-2">
                     <Button variant="secondary" onClick={() => edit(member)} className="px-3">
                       <Pencil size={14} />
@@ -531,10 +543,110 @@ export function StaffPage() {
               {form.id ? t.common.save : t.common.create}
             </Button>
           </form>
+          <StaffDetailPanel
+            member={selectedStaff}
+            services={servicesQuery.data ?? []}
+            reviews={reviewsQuery.data ?? []}
+          />
         </aside>
       </div>
     </div>
   );
+}
+
+function normalizeOptionalPhone(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '+55') return null;
+  return trimmed;
+}
+
+function StaffDetailPanel({
+  member,
+  services,
+  reviews,
+}: {
+  member: Staff | null;
+  services: Array<{ id: string; name: string }>;
+  reviews: Array<{ barberId: string; rating: number }>;
+}) {
+  if (!member) {
+    return (
+      <section className="mt-5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-text-muted)]">
+        Selecione um membro para ver serviços, horários e avaliações.
+      </section>
+    );
+  }
+
+  const memberReviews = reviews.filter((review) => review.barberId === member.id);
+  const average =
+    memberReviews.length > 0
+      ? memberReviews.reduce((sum, review) => sum + review.rating, 0) / memberReviews.length
+      : null;
+  const serviceNames = member.assignedServiceIds
+    .map((id) => services.find((service) => service.id === id)?.name)
+    .filter(Boolean);
+  const workingDays = DAY_KEYS.filter((day) => !!member.schedule[day]?.length);
+
+  return (
+    <section className="mt-5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-[var(--color-text)]">
+            {member.displayName}
+          </p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            {member.role === 'staff' ? t.staff.roles.staff : t.staff.roles.barber} ·{' '}
+            {member.isActive ? t.common.active : t.common.inactive}
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1 rounded bg-[#edf7e9] px-2 py-1 text-xs font-semibold text-[#176527]">
+          <Star size={13} className={average === null ? '' : 'fill-current'} />
+          {average === null ? t.common.none : formatRating(average)}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 text-sm">
+        <DetailRow
+          icon={<Scissors size={15} />}
+          label={t.staff.assignedServices}
+          value={serviceNames.length ? serviceNames.join(', ') : t.common.none}
+        />
+        <DetailRow
+          icon={<Clock3 size={15} />}
+          label={t.staff.schedule}
+          value={
+            workingDays.length
+              ? workingDays.map((day) => t.settings.hours.days[day]).join(', ')
+              : t.staff.scheduleHelp
+          }
+        />
+        <DetailRow
+          icon={<Star size={15} />}
+          label={t.reviews.title}
+          value={`${memberReviews.length} ${t.reviews.countLabel}`}
+        />
+      </div>
+    </section>
+  );
+}
+
+function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-md bg-[var(--color-surface)] px-3 py-2">
+      <span className="mt-0.5 text-[var(--color-text-muted)]">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
+        <p className="mt-0.5 break-words text-sm font-medium text-[var(--color-text)]">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function formatRating(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 function validateStaffForm(form: StaffFormState, ownerEmail: string | null): string | null {

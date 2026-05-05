@@ -222,6 +222,7 @@ function clientToCamel(row: Record<string, unknown>) {
     phone: row.phone,
     name: row.name,
     email: row.email,
+    authUserId: row.auth_user_id,
     lgpdConsentAt: row.lgpd_consent_at,
     anonymizedAt: row.anonymized_at,
     notes: row.notes,

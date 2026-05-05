@@ -60,6 +60,10 @@ export function ClientsPage() {
         setError(t.clients.errors.duplicate);
         return;
       }
+      if (err instanceof ApiError && err.code === 'validation_failed') {
+        setError(t.clients.errors.validation);
+        return;
+      }
       setError(t.clients.errors.generic);
     },
   });
@@ -273,6 +277,9 @@ function ClientHistoryPanel({
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               {bookings.length} agendamentos · {completed.length} concluidos ·{' '}
               {formatBRL(totalSpent)}
+            </p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              Conta do cliente: {client.authUserId ? 'vinculada' : 'nao vinculada'}
             </p>
             {upcoming[0] ? (
               <p className="mt-1 text-xs text-[var(--color-text-muted)]">
