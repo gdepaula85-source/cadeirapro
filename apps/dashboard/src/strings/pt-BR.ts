@@ -173,6 +173,12 @@ export const t = {
     pixKeyType: 'Tipo da chave',
     commissionPct: 'Comissão (%)',
     commissionPctHelp: 'Percentual da receita do serviço (ex.: 50 para 50%).',
+    assignedServices: 'Serviços atendidos',
+    assignedServicesHelp: 'A agenda só permite este barbeiro nos serviços selecionados.',
+    assignedServicesCount: 'serviços atribuídos',
+    noServicesAvailable: 'Cadastre serviços antes de atribuir ao barbeiro.',
+    schedule: 'Horário do barbeiro',
+    scheduleHelp: 'Deixe vazio para usar o horário geral da loja.',
     partnerStatus: 'Vínculo',
     partnerStatusOptions: {
       parceiro: 'Parceiro',

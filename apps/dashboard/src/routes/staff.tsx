@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AtSign,
+  CalendarDays,
   KeyRound,
   Mail,
   Pencil,
@@ -14,7 +15,14 @@ import {
   UserX,
   Users,
 } from 'lucide-react';
-import type { CreateStaffInput, PixKeyType, Staff, StaffRole } from '@cadeirapro/shared';
+import type {
+  CreateStaffInput,
+  HoursMap,
+  HoursWindow,
+  PixKeyType,
+  Staff,
+  StaffRole,
+} from '@cadeirapro/shared';
 import { api, ApiError } from '../lib/api';
 import { Button } from '../components/Button';
 import { Field, SelectField } from '../components/Field';
@@ -32,6 +40,8 @@ interface StaffFormState {
   commissionPctText: string; // entered as "50" for 50%
   partnerStatus: 'parceiro' | 'employee';
   isActive: boolean;
+  assignedServiceIds: string[];
+  schedule: HoursMap;
 }
 
 const emptyForm: StaffFormState = {
@@ -45,7 +55,11 @@ const emptyForm: StaffFormState = {
   commissionPctText: '',
   partnerStatus: 'parceiro',
   isActive: true,
+  assignedServiceIds: [],
+  schedule: {},
 };
+
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
 function pctTextToFraction(text: string): number | null {
   if (!text.trim()) return null;
@@ -69,6 +83,10 @@ export function StaffPage() {
     queryKey: ['staff', includeInactive],
     queryFn: () => api.staff.list(includeInactive),
   });
+  const servicesQuery = useQuery({
+    queryKey: ['services', false],
+    queryFn: () => api.services.list(false),
+  });
 
   const saveMutation = useMutation({
     mutationFn: async (state: StaffFormState) => {
@@ -84,6 +102,8 @@ export function StaffPage() {
           commissionPct,
           partnerStatus: state.partnerStatus,
           isActive: state.isActive,
+          assignedServiceIds: state.role === 'barber' ? state.assignedServiceIds : [],
+          schedule: state.role === 'barber' ? state.schedule : {},
         });
       }
       const create: CreateStaffInput = {
@@ -96,6 +116,8 @@ export function StaffPage() {
         pixKeyType: state.pixKey && state.pixKeyType ? state.pixKeyType : null,
         commissionPct,
         partnerStatus: state.partnerStatus,
+        assignedServiceIds: state.role === 'barber' ? state.assignedServiceIds : [],
+        schedule: state.role === 'barber' ? state.schedule : {},
       };
       return api.staff.create(create);
     },
@@ -135,6 +157,43 @@ export function StaffPage() {
       commissionPctText: fractionToPctText(member.commissionPct),
       partnerStatus: member.partnerStatus === 'employee' ? 'employee' : 'parceiro',
       isActive: member.isActive,
+      assignedServiceIds: member.assignedServiceIds,
+      schedule: member.schedule,
+    });
+  }
+
+  function serviceName(serviceId: string): string {
+    return servicesQuery.data?.find((service) => service.id === serviceId)?.name ?? serviceId;
+  }
+
+  function toggleService(serviceId: string, checked: boolean) {
+    setForm((current) => ({
+      ...current,
+      assignedServiceIds: checked
+        ? [...new Set([...current.assignedServiceIds, serviceId])]
+        : current.assignedServiceIds.filter((id) => id !== serviceId),
+    }));
+  }
+
+  function setScheduleDay(day: keyof HoursMap, enabled: boolean) {
+    setForm((current) => {
+      const next = { ...current.schedule };
+      if (enabled) next[day] = next[day]?.length ? next[day] : [{ open: '09:00', close: '18:00' }];
+      else delete next[day];
+      return { ...current, schedule: next };
+    });
+  }
+
+  function setScheduleWindow(day: keyof HoursMap, field: keyof HoursWindow, value: string) {
+    setForm((current) => {
+      const currentWindow = current.schedule[day]?.[0] ?? { open: '09:00', close: '18:00' };
+      return {
+        ...current,
+        schedule: {
+          ...current.schedule,
+          [day]: [{ ...currentWindow, [field]: value }],
+        },
+      };
     });
   }
 
@@ -222,6 +281,17 @@ export function StaffPage() {
                         </span>
                       ) : null}
                     </div>
+                    {member.role === 'barber' ? (
+                      <div className="mt-2 text-xs text-[var(--color-text-muted)]">
+                        <span className="font-medium text-[var(--color-text)]">
+                          {member.assignedServiceIds.length}
+                        </span>{' '}
+                        {t.staff.assignedServicesCount}
+                        {member.assignedServiceIds.length > 0 ? (
+                          <span> · {member.assignedServiceIds.slice(0, 3).map(serviceName).join(', ')}</span>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {member.pixKey ? (
                       <div className="flex items-center gap-1 mt-1.5 text-xs text-[var(--color-text-muted)]">
                         <KeyRound size={12} />
@@ -357,6 +427,90 @@ export function StaffPage() {
                 />
                 {t.staff.isActive}
               </label>
+            ) : null}
+            {form.role === 'barber' ? (
+              <section className="space-y-3 rounded-md border border-[var(--color-border)] p-3">
+                <div>
+                  <h3 className="text-sm font-medium text-[var(--color-text)]">
+                    {t.staff.assignedServices}
+                  </h3>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                    {t.staff.assignedServicesHelp}
+                  </p>
+                </div>
+                {servicesQuery.isLoading ? (
+                  <p className="text-xs text-[var(--color-text-muted)]">{t.common.loading}</p>
+                ) : servicesQuery.data?.length ? (
+                  <div className="grid grid-cols-1 gap-2">
+                    {servicesQuery.data.map((service) => (
+                      <label
+                        key={service.id}
+                        className="flex items-center gap-2 text-sm text-[var(--color-text)]"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-[var(--color-primary)]"
+                          checked={form.assignedServiceIds.includes(service.id)}
+                          onChange={(e) => toggleService(service.id, e.currentTarget.checked)}
+                        />
+                        <span className="truncate">{service.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    {t.staff.noServicesAvailable}
+                  </p>
+                )}
+              </section>
+            ) : null}
+            {form.role === 'barber' ? (
+              <section className="space-y-3 rounded-md border border-[var(--color-border)] p-3">
+                <div className="flex items-start gap-2">
+                  <CalendarDays size={15} className="mt-0.5 text-[var(--color-text-muted)]" />
+                  <div>
+                    <h3 className="text-sm font-medium text-[var(--color-text)]">
+                      {t.staff.schedule}
+                    </h3>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                      {t.staff.scheduleHelp}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {DAY_KEYS.map((day) => {
+                    const enabled = !!form.schedule[day]?.length;
+                    const window = form.schedule[day]?.[0] ?? { open: '09:00', close: '18:00' };
+                    return (
+                      <div key={day} className="grid grid-cols-[1fr_88px_88px] gap-2 items-center">
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-[var(--color-primary)]"
+                            checked={enabled}
+                            onChange={(e) => setScheduleDay(day, e.currentTarget.checked)}
+                          />
+                          {t.settings.hours.days[day]}
+                        </label>
+                        <input
+                          type="time"
+                          className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm disabled:opacity-50"
+                          value={window.open}
+                          disabled={!enabled}
+                          onChange={(e) => setScheduleWindow(day, 'open', e.currentTarget.value)}
+                        />
+                        <input
+                          type="time"
+                          className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1.5 text-sm disabled:opacity-50"
+                          value={window.close}
+                          disabled={!enabled}
+                          onChange={(e) => setScheduleWindow(day, 'close', e.currentTarget.value)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
             ) : null}
             {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
             <Button type="submit" loading={saveMutation.isPending} className="w-full gap-2">

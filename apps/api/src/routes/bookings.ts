@@ -80,6 +80,8 @@ bookingsRouter.post(
     if (!serviceRes.data) throw new NotFound('service_not_found');
     if (!serviceRes.data.is_active) throw new BadRequest('service_inactive');
 
+    await assertBarberCanPerformService(supabase, user.organizationId!, input.barberId, input.serviceId);
+
     const startsAt = new Date(input.startsAt);
     if (Number.isNaN(startsAt.getTime())) throw new BadRequest('invalid_starts_at');
     const endsAt = new Date(startsAt.getTime() + Number(serviceRes.data.duration_minutes) * 60_000);
@@ -182,6 +184,11 @@ bookingsRouter.patch(
       if (input.status === 'cancelled') patch.cancelled_at = new Date().toISOString();
     }
 
+    if (input.barberId !== undefined) {
+      const serviceId = await serviceIdForBooking(supabase, user.organizationId!, id);
+      await assertBarberCanPerformService(supabase, user.organizationId!, input.barberId, serviceId);
+    }
+
     const { data, error } = await supabase
       .from('bookings')
       .update(patch)
@@ -255,6 +262,51 @@ async function audit(
     userAgent: c.req.header('user-agent') ?? null,
   });
   if (error) c.get('logger').warn('audit_write_failed', { action, entityId, error: error.message });
+}
+
+async function serviceIdForBooking(
+  supabase: ReturnType<typeof supabaseAsUser>,
+  organizationId: string,
+  bookingId: string,
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('service_id')
+    .eq('organization_id', organizationId)
+    .eq('id', bookingId)
+    .maybeSingle();
+  if (error) throw new Error(`booking_lookup_failed: ${error.message}`);
+  if (!data) throw new NotFound('booking_not_found');
+  return data.service_id as string;
+}
+
+async function assertBarberCanPerformService(
+  supabase: ReturnType<typeof supabaseAsUser>,
+  organizationId: string,
+  barberId: string,
+  serviceId: string,
+): Promise<void> {
+  const [barberRes, assignmentRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, is_active, role')
+      .eq('organization_id', organizationId)
+      .eq('id', barberId)
+      .eq('role', 'barber')
+      .maybeSingle(),
+    supabase
+      .from('service_barbers')
+      .select('service_id')
+      .eq('barber_id', barberId)
+      .eq('service_id', serviceId)
+      .maybeSingle(),
+  ]);
+
+  if (barberRes.error) throw new Error(`barber_lookup_failed: ${barberRes.error.message}`);
+  if (!barberRes.data || !barberRes.data.is_active) throw new BadRequest('invalid_barber');
+  if (assignmentRes.error)
+    throw new Error(`service_assignment_lookup_failed: ${assignmentRes.error.message}`);
+  if (!assignmentRes.data) throw new BadRequest('barber_not_assigned_to_service');
 }
 
 // supabase-js doesn't carry types for joined selects without generated DB

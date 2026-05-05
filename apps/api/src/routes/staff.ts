@@ -19,7 +19,7 @@ import type { AppEnv } from '../app-env';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { idempotency } from '../middleware/idempotency';
 import { validate } from '../middleware/validate';
-import { Conflict, NotFound } from '../lib/errors';
+import { BadRequest, Conflict, NotFound } from '../lib/errors';
 import { supabaseAdmin, supabaseAsUser } from '../lib/supabase';
 import { writeAuditLog } from '../lib/audit';
 
@@ -47,7 +47,7 @@ staffRouter.get('/v1/staff', validate('query', StaffListQuerySchema), async (c) 
 
   const { data, error } = await db;
   if (error) throw new Error(`staff_list_failed: ${error.message}`);
-  return c.json({ data: (data ?? []).map(staffToCamel) });
+  return c.json({ data: await withServiceAssignments(supabase, data ?? []) });
 });
 
 staffRouter.post(
@@ -60,6 +60,8 @@ staffRouter.post(
     const config = c.get('config');
     const input = c.req.valid('json');
     const admin = supabaseAdmin(config);
+    const assignedServiceIds = input.role === 'barber' ? input.assignedServiceIds : [];
+    const schedule = input.role === 'barber' ? input.schedule : {};
 
     // 1. Auth user. email_confirm: true means no verification email sent.
     const password = generateThrowawayPassword();
@@ -93,6 +95,7 @@ staffRouter.post(
         commission_pct: input.commissionPct ?? null,
         partner_status: input.partnerStatus,
         is_active: true,
+        schedule,
       })
       .select('*')
       .single();
@@ -109,12 +112,28 @@ staffRouter.post(
       throw new Error(`staff_profile_insert_failed: ${error.message}`);
     }
 
+    try {
+      await replaceServiceAssignments(admin, user.organizationId!, data.id, assignedServiceIds);
+    } catch (err) {
+      await admin.from('profiles').delete().eq('id', newUserId);
+      const delRes = await admin.auth.admin.deleteUser(newUserId);
+      if (delRes.error) {
+        c.get('logger').error('staff_rollback_delete_user_failed', {
+          userId: newUserId,
+          message: delRes.error.message,
+        });
+      }
+      if (err instanceof BadRequest) throw err;
+      throw new Error(`staff_service_assignment_failed: ${(err as Error).message}`);
+    }
+
     await audit(c, 'staff.create', data.id, {
       role: data.role,
       display_name: data.display_name,
       email: data.email,
+      assigned_service_ids: assignedServiceIds,
     });
-    return c.json({ data: staffToCamel(data) }, 201);
+    return c.json({ data: staffToCamel(data, assignedServiceIds) }, 201);
   },
 );
 
@@ -133,7 +152,8 @@ staffRouter.get('/v1/staff/:id', validate('param', IdParamSchema), async (c) => 
 
   if (error) throw new Error(`staff_lookup_failed: ${error.message}`);
   if (!data) throw new NotFound('staff_not_found');
-  return c.json({ data: staffToCamel(data) });
+  const [enriched] = await withServiceAssignments(supabase, [data]);
+  return c.json({ data: enriched });
 });
 
 staffRouter.patch(
@@ -159,21 +179,64 @@ staffRouter.patch(
     if (input.partnerStatus !== undefined) patch.partner_status = input.partnerStatus;
     if (input.isActive !== undefined) patch.is_active = input.isActive;
 
-    const { data, error } = await supabase
+    const existingRes = await supabase
       .from('profiles')
-      .update(patch)
+      .select('*')
       .eq('organization_id', user.organizationId!)
       .eq('id', id)
       .in('role', ['barber', 'staff'])
-      .select('*')
       .maybeSingle();
 
-    if (error?.code === PG_UNIQUE_VIOLATION) throw new Conflict('staff_email_in_use');
-    if (error) throw new Error(`staff_update_failed: ${error.message}`);
-    if (!data) throw new NotFound('staff_not_found');
+    if (existingRes.error) throw new Error(`staff_lookup_failed: ${existingRes.error.message}`);
+    if (!existingRes.data) throw new NotFound('staff_not_found');
 
-    await audit(c, 'staff.update', data.id, { fields: Object.keys(patch) });
-    return c.json({ data: staffToCamel(data) });
+    if (input.schedule !== undefined) {
+      patch.schedule = existingRes.data.role === 'barber' ? input.schedule : {};
+    }
+
+    let data = existingRes.data;
+    if (Object.keys(patch).length > 0) {
+      const updateRes = await supabase
+        .from('profiles')
+        .update(patch)
+        .eq('organization_id', user.organizationId!)
+        .eq('id', id)
+        .in('role', ['barber', 'staff'])
+        .select('*')
+        .maybeSingle();
+
+      if (updateRes.error?.code === PG_UNIQUE_VIOLATION) throw new Conflict('staff_email_in_use');
+      if (updateRes.error) throw new Error(`staff_update_failed: ${updateRes.error.message}`);
+      if (!updateRes.data) throw new NotFound('staff_not_found');
+      data = updateRes.data;
+    }
+
+    const assignedServiceIds =
+      data.role === 'barber' && input.assignedServiceIds !== undefined
+        ? input.assignedServiceIds
+        : [];
+
+    if (input.assignedServiceIds !== undefined) {
+      await replaceServiceAssignments(
+        supabaseAdmin(c.get('config')),
+        user.organizationId!,
+        data.id,
+        assignedServiceIds,
+      );
+    }
+
+    const assigned =
+      input.assignedServiceIds !== undefined
+        ? assignedServiceIds
+        : await serviceIdsForStaff(supabase, data.id);
+
+    await audit(c, 'staff.update', data.id, {
+      fields: [
+        ...Object.keys(patch),
+        ...(input.assignedServiceIds !== undefined ? ['assigned_service_ids'] : []),
+      ],
+    });
+    return c.json({ data: staffToCamel(data, assigned) });
   },
 );
 
@@ -202,7 +265,8 @@ staffRouter.delete(
     if (!data) throw new NotFound('staff_not_found');
 
     await audit(c, 'staff.archive', data.id, { display_name: data.display_name });
-    return c.json({ data: staffToCamel(data) });
+    const assigned = await serviceIdsForStaff(supabase, data.id);
+    return c.json({ data: staffToCamel(data, assigned) });
   },
 );
 
@@ -216,6 +280,68 @@ function generateThrowawayPassword(): string {
   let out = '';
   for (let i = 0; i < bytes.length; i += 1) out += alphabet[bytes[i]! % alphabet.length];
   return out;
+}
+
+async function replaceServiceAssignments(
+  supabase: ReturnType<typeof supabaseAdmin>,
+  organizationId: string,
+  staffId: string,
+  serviceIds: string[],
+): Promise<void> {
+  const unique = [...new Set(serviceIds)];
+
+  if (unique.length > 0) {
+    const { data, error } = await supabase
+      .from('services')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .in('id', unique);
+    if (error) throw new Error(error.message);
+    if ((data ?? []).length !== unique.length) throw new BadRequest('invalid_service_assignment');
+  }
+
+  const del = await supabase.from('service_barbers').delete().eq('barber_id', staffId);
+  if (del.error) throw new Error(del.error.message);
+
+  if (unique.length === 0) return;
+  const ins = await supabase
+    .from('service_barbers')
+    .insert(unique.map((serviceId) => ({ service_id: serviceId, barber_id: staffId })));
+  if (ins.error) throw new Error(ins.error.message);
+}
+
+async function serviceIdsForStaff(
+  supabase: ReturnType<typeof supabaseAsUser>,
+  staffId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('service_barbers')
+    .select('service_id')
+    .eq('barber_id', staffId);
+  if (error) throw new Error(`staff_service_assignments_lookup_failed: ${error.message}`);
+  return (data ?? []).map((row) => row.service_id as string);
+}
+
+async function withServiceAssignments(
+  supabase: ReturnType<typeof supabaseAsUser>,
+  rows: Record<string, unknown>[],
+) {
+  if (rows.length === 0) return [];
+  const ids = rows.map((row) => row.id as string);
+  const { data, error } = await supabase
+    .from('service_barbers')
+    .select('service_id, barber_id')
+    .in('barber_id', ids);
+  if (error) throw new Error(`staff_service_assignments_lookup_failed: ${error.message}`);
+
+  const byStaff = new Map<string, string[]>();
+  for (const row of data ?? []) {
+    const staffId = row.barber_id as string;
+    const serviceId = row.service_id as string;
+    byStaff.set(staffId, [...(byStaff.get(staffId) ?? []), serviceId]);
+  }
+
+  return rows.map((row) => staffToCamel(row, byStaff.get(row.id as string) ?? []));
 }
 
 async function audit(
@@ -239,7 +365,7 @@ async function audit(
   if (error) c.get('logger').warn('audit_write_failed', { action, entityId, error: error.message });
 }
 
-function staffToCamel(row: Record<string, unknown>) {
+function staffToCamel(row: Record<string, unknown>, assignedServiceIds: string[] = []) {
   return {
     id: row.id,
     organizationId: row.organization_id,
@@ -254,6 +380,8 @@ function staffToCamel(row: Record<string, unknown>) {
     commissionPct: row.commission_pct === null ? null : Number(row.commission_pct),
     partnerStatus: row.partner_status,
     isActive: row.is_active,
+    assignedServiceIds,
+    schedule: row.schedule ?? {},
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

@@ -5,6 +5,7 @@
 // the password-recovery flow when (if) we surface a staff portal.
 import { z } from 'zod';
 import { PixKeyTypeSchema } from './pix';
+import { HoursMapSchema } from './organization-update';
 import { validatePixKeyFormat } from '../pix';
 
 const E164_RE = /^\+[1-9]\d{1,14}$/;
@@ -45,6 +46,8 @@ export const StaffSchema = z.object({
   commissionPct: z.number().min(0).max(1).nullable().optional(),
   partnerStatus: z.enum(['parceiro', 'employee']),
   isActive: z.boolean(),
+  assignedServiceIds: z.array(z.string().uuid()).default([]),
+  schedule: HoursMapSchema.default({}),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -66,6 +69,8 @@ export const CreateStaffInputSchema = z
     pixKeyType: PixKeyTypeSchema.nullable().optional(),
     commissionPct: z.coerce.number().min(0).max(1).nullable().optional(),
     partnerStatus: z.enum(['parceiro', 'employee']).default('parceiro'),
+    assignedServiceIds: z.array(z.string().uuid()).default([]),
+    schedule: HoursMapSchema.default({}),
   })
   // If pixKey is set, pixKeyType is required and must match the format.
   .refine(
@@ -96,6 +101,8 @@ export const UpdateStaffInputSchema = z
     commissionPct: z.coerce.number().min(0).max(1).nullable().optional(),
     partnerStatus: z.enum(['parceiro', 'employee']).optional(),
     isActive: z.boolean().optional(),
+    assignedServiceIds: z.array(z.string().uuid()).optional(),
+    schedule: HoursMapSchema.optional(),
   })
   .refine((input) => Object.keys(input).length > 0, {
     message: 'at least one field is required',

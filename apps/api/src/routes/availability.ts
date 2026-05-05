@@ -33,7 +33,7 @@ availabilityRouter.get(
     const dayQueryFrom = new Date(dayStart - 24 * 60 * 60_000).toISOString();
     const dayQueryTo = new Date(dayStart + 48 * 60 * 60_000).toISOString();
 
-    const [orgRes, serviceRes, bookingsRes, blocksRes] = await Promise.all([
+    const [orgRes, serviceRes, barberRes, assignmentRes, bookingsRes, blocksRes] = await Promise.all([
       supabase
         .from('organizations')
         .select('timezone, hours')
@@ -44,6 +44,19 @@ availabilityRouter.get(
         .select('id, organization_id, duration_minutes, is_active')
         .eq('organization_id', user.organizationId!)
         .eq('id', serviceId)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('id, role, is_active, schedule')
+        .eq('organization_id', user.organizationId!)
+        .eq('id', barberId)
+        .eq('role', 'barber')
+        .maybeSingle(),
+      supabase
+        .from('service_barbers')
+        .select('service_id')
+        .eq('service_id', serviceId)
+        .eq('barber_id', barberId)
         .maybeSingle(),
       supabase
         .from('bookings')
@@ -67,11 +80,18 @@ availabilityRouter.get(
     if (serviceRes.error) throw new Error(`service_lookup_failed: ${serviceRes.error.message}`);
     if (!serviceRes.data) throw new NotFound('service_not_found');
     if (!serviceRes.data.is_active) throw new BadRequest('service_inactive');
+    if (barberRes.error) throw new Error(`barber_lookup_failed: ${barberRes.error.message}`);
+    if (!barberRes.data || !barberRes.data.is_active) throw new NotFound('barber_not_found');
+    if (assignmentRes.error)
+      throw new Error(`service_assignment_lookup_failed: ${assignmentRes.error.message}`);
+    if (!assignmentRes.data) throw new BadRequest('barber_not_assigned_to_service');
     if (bookingsRes.error) throw new Error(`bookings_list_failed: ${bookingsRes.error.message}`);
     if (blocksRes.error) throw new Error(`blocks_list_failed: ${blocksRes.error.message}`);
 
     const timezone = (orgRes.data.timezone as string) || 'America/Sao_Paulo';
-    const workingHours = (orgRes.data.hours ?? {}) as WorkingHoursMap;
+    const barberSchedule = (barberRes.data.schedule ?? {}) as WorkingHoursMap;
+    const orgHours = (orgRes.data.hours ?? {}) as WorkingHoursMap;
+    const workingHours = Object.keys(barberSchedule).length > 0 ? barberSchedule : orgHours;
 
     const existingBookings: TimeRange[] = (bookingsRes.data ?? []).map((b) => ({
       startsAt: b.starts_at as string,

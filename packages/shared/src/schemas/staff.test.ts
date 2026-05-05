@@ -12,6 +12,8 @@ describe('CreateStaffInputSchema', () => {
       displayName: 'João Silva',
       role: 'barber',
       partnerStatus: 'parceiro',
+      assignedServiceIds: [],
+      schedule: {},
     });
   });
 
@@ -66,6 +68,24 @@ describe('UpdateStaffInputSchema', () => {
 
   it('accepts a single-field patch', () => {
     expect(UpdateStaffInputSchema.parse({ isActive: false })).toEqual({ isActive: false });
+  });
+
+  it('accepts service assignments and weekly schedule', () => {
+    const serviceId = '11111111-1111-4111-8111-111111111111';
+    const parsed = UpdateStaffInputSchema.parse({
+      assignedServiceIds: [serviceId],
+      schedule: { mon: [{ open: '09:00', close: '18:00' }] },
+    });
+    expect(parsed.assignedServiceIds).toEqual([serviceId]);
+    expect(parsed.schedule).toEqual({ mon: [{ open: '09:00', close: '18:00' }] });
+  });
+
+  it('rejects inverted schedule windows', () => {
+    expect(() =>
+      UpdateStaffInputSchema.parse({
+        schedule: { mon: [{ open: '18:00', close: '09:00' }] },
+      }),
+    ).toThrow();
   });
 
   it('still validates pixKey/type pairing on update', () => {
