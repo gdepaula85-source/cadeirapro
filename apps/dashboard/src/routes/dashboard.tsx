@@ -4,23 +4,25 @@
 import { Link, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
+  AlertCircle,
   ArrowRight,
   CalendarDays,
   CalendarPlus,
   CreditCard,
   DollarSign,
   Scissors,
-  Star,
   TrendingUp,
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { formatBRL, type Booking, type DashboardKpis } from '@cadeirapro/shared';
+import { formatBRL, SAO_PAULO_TZ, type Booking, type DashboardKpis } from '@cadeirapro/shared';
 import { api } from '../lib/api';
 import { t } from '../strings/pt-BR';
 
 interface LayoutContext {
   shopName: string;
+  /** IANA tz from /v1/me; defaults to São Paulo when the org row has none. */
+  timezone: string;
 }
 
 type KpiId = 'bookingsToday' | 'revenueToday' | 'activeClients' | 'noShowRate';
@@ -31,11 +33,16 @@ interface KPIDef {
   icon: LucideIcon;
 }
 
+// Labels match pt-BR.ts so a fresh translator only edits one file. The mock
+// shows "Ticket médio" and "Avaliação", but neither is real data yet (no
+// reviews table; ticket-medio needs a 30/90-day window not today). Reverting
+// to the honest metrics we actually compute and swap labels when the backing
+// data lands.
 const KPIS: KPIDef[] = [
   { id: 'bookingsToday', label: t.dashboard.kpis.bookingsToday, icon: CalendarDays },
   { id: 'activeClients', label: t.dashboard.kpis.activeClients, icon: Users },
-  { id: 'revenueToday', label: 'Ticket medio', icon: DollarSign },
-  { id: 'noShowRate', label: 'Avaliacao', icon: Star },
+  { id: 'revenueToday', label: t.dashboard.kpis.revenueToday, icon: DollarSign },
+  { id: 'noShowRate', label: t.dashboard.kpis.noShowRate, icon: AlertCircle },
 ];
 
 interface NextStep {
@@ -48,41 +55,75 @@ interface NextStep {
 
 const NEXT_STEPS: NextStep[] = [
   {
-    title: 'Servicos',
-    body: 'Ajuste cortes, duracoes e precos usados na agenda publica.',
+    title: 'Serviços',
+    body: 'Ajuste cortes, durações e preços usados na agenda pública.',
     icon: Scissors,
-    cta: 'Abrir servicos',
+    cta: 'Abrir serviços',
     to: '/services',
   },
   {
     title: 'Equipe',
-    body: 'Configure barbeiros, comissoes e servicos atendidos.',
+    body: 'Configure barbeiros, comissões e serviços atendidos.',
     icon: Users,
     cta: 'Abrir equipe',
     to: '/staff',
   },
   {
-    title: 'Horario',
+    title: 'Horário',
     body: 'Defina janelas de atendimento para calcular os slots.',
     icon: CalendarPlus,
-    cta: 'Abrir configuracoes',
+    cta: 'Abrir configurações',
     to: '/settings',
   },
   {
     title: 'Pix',
-    body: 'Proximo passo para confirmar reservas com pagamento.',
+    body: 'Próximo passo para confirmar reservas com pagamento.',
     icon: CreditCard,
     cta: 'Abrir pagamentos',
     to: '/payments',
   },
 ];
 
-function dayBoundsUtc(date = new Date()): { from: string; to: string } {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
-  return { from: start.toISOString(), to: end.toISOString() };
+/**
+ * UTC bounds of "today" anchored to the shop's timezone. Browser-local
+ * boundaries would be wrong for an owner traveling out of the shop's tz —
+ * the KPI route already computes today this way (see apps/api/src/services
+ * /dashboard/period.ts), so the agenda list and the "Agendamentos hoje" tile
+ * stay in agreement.
+ */
+function dayBoundsUtc(tz: string, now = new Date()): { from: string; to: string } {
+  const ymd = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  const [y, m, d] = ymd.split('-').map(Number) as [number, number, number];
+  // Build local-midnight in the shop tz by reinterpreting a naive UTC date.
+  // (Same trick as the API — kept inline rather than dragging shopDayBoundaries
+  // out of services/dashboard since that helper isn't exported from shared.)
+  const naiveStart = new Date(Date.UTC(y, m - 1, d, 0, 0, 0));
+  const naiveEnd = new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0));
+  const wall = (date: Date) =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+  const offsetMs = (naive: Date) => {
+    const parts = wall(naive);
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+    const wallMs = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
+    return wallMs - naive.getTime();
+  };
+  const startMs = naiveStart.getTime() - offsetMs(naiveStart);
+  const endMs = naiveEnd.getTime() - offsetMs(naiveEnd);
+  return { from: new Date(startMs).toISOString(), to: new Date(endMs).toISOString() };
 }
 
 function formatKpi(id: KpiId, kpis: DashboardKpis | undefined): string {
@@ -93,13 +134,13 @@ function formatKpi(id: KpiId, kpis: DashboardKpis | undefined): string {
     case 'activeClients':
       return String(kpis.activeClients90d);
     case 'revenueToday':
-      return kpis.bookingsToday > 0
-        ? formatBRL(Math.round(kpis.revenueTodayCents / kpis.bookingsToday))
-        : formatBRL(0);
+      return formatBRL(kpis.revenueTodayCents);
     case 'noShowRate':
+      // Null = zero denominator (no completed/no-show bookings in 30d). Show
+      // the placeholder rather than fabricating a number.
       return kpis.noShowRate === null
-        ? '4,9'
-        : `${Math.max(0, 5 - kpis.noShowRate / 20).toFixed(1)}`;
+        ? t.dashboard.placeholder
+        : `${kpis.noShowRate.toFixed(1)}%`;
   }
 }
 
@@ -119,8 +160,8 @@ function formatToday(): string {
 }
 
 export function DashboardPage() {
-  const { shopName } = useOutletContext<LayoutContext>();
-  const range = dayBoundsUtc();
+  const { shopName, timezone } = useOutletContext<LayoutContext>();
+  const range = dayBoundsUtc(timezone || SAO_PAULO_TZ);
 
   const kpisQuery = useQuery({
     queryKey: ['dashboard', 'kpis'],
@@ -143,9 +184,9 @@ export function DashboardPage() {
         <div>
           <p className="text-sm font-medium capitalize text-[#647067]">{formatToday()}</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#101713]">
-            Ola{shopName ? `, ${shopName}` : ''}!
+            Olá{shopName ? `, ${shopName}` : ''}!
           </h1>
-          <p className="mt-1 text-sm text-[#647067]">Aqui esta o resumo do seu negocio.</p>
+          <p className="mt-1 text-sm text-[#647067]">Aqui está o resumo do seu negócio.</p>
         </div>
         <Link
           to="/calendar"
@@ -172,6 +213,11 @@ export function DashboardPage() {
 }
 
 function RevenueHero({ value, isLoading }: { value: number; isLoading: boolean }) {
+  // The mock includes a "+18% vs semana anterior" badge and a sparkline. Both
+  // are placeholders for real period-over-period and time-series data — when
+  // those land, restore the badge driven by a real WoW % and the sparkline
+  // driven by the last 7 days of revenue. Until then we don't ship either,
+  // because hardcoded figures look real enough to mislead.
   return (
     <section className="overflow-hidden rounded-[28px] bg-[#021b15] p-5 text-white shadow-[0_22px_55px_rgb(2_27_21_/_0.18)]">
       <div className="flex items-start justify-between gap-4">
@@ -180,29 +226,10 @@ function RevenueHero({ value, isLoading }: { value: number; isLoading: boolean }
           <p className="mt-5 text-3xl font-semibold tracking-tight">
             {isLoading ? t.dashboard.placeholder : formatBRL(value)}
           </p>
-          <p className="mt-2 text-sm font-medium text-[#8de47f]">+18% vs semana anterior</p>
         </div>
         <div className="rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white/82">
           Hoje
         </div>
-      </div>
-      <div className="mt-7 h-20">
-        <svg viewBox="0 0 320 82" className="h-full w-full" aria-hidden>
-          <path
-            d="M2 65 C28 60 34 34 58 41 C82 48 88 21 113 28 C139 35 132 60 160 51 C188 42 186 22 214 27 C242 32 234 57 264 50 C292 43 290 18 318 24"
-            fill="none"
-            stroke="#8de47f"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
-          <path
-            d="M2 65 C28 60 34 34 58 41 C82 48 88 21 113 28 C139 35 132 60 160 51 C188 42 186 22 214 27 C242 32 234 57 264 50 C292 43 290 18 318 24"
-            fill="none"
-            stroke="rgb(255 255 255 / 0.24)"
-            strokeWidth="10"
-            strokeLinecap="round"
-          />
-        </svg>
       </div>
     </section>
   );
@@ -271,8 +298,14 @@ function AgendaItem({ booking, accent }: { booking: Booking; accent: string }) {
         <p className="truncate text-sm font-semibold text-[#101713]">
           {booking.clientName || 'Cliente'}
         </p>
-        <p className="truncate text-xs text-[#647067]">{booking.serviceName || 'Servico'}</p>
+        <p className="truncate text-xs text-[#647067]">{booking.serviceName || 'Serviço'}</p>
       </div>
+      {/*
+        Status badge is purely the booking lifecycle, NOT payment. When Pix
+        ships and `payments.status` exists, drive a separate "Pago/Não pago"
+        chip from there — but `completed` will sometimes coincide with a
+        failed payment, so the two must stay distinct.
+      */}
       <span
         className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
           booking.status === 'pending'
@@ -285,7 +318,7 @@ function AgendaItem({ booking, accent }: { booking: Booking; accent: string }) {
         {booking.status === 'pending'
           ? 'Pendente'
           : booking.status === 'completed'
-            ? 'Pago'
+            ? 'Concluído'
             : 'Confirmado'}
       </span>
     </article>
@@ -309,7 +342,7 @@ function NextSteps() {
   return (
     <section className="rounded-[28px] border border-[#dfe7dc] bg-white p-5 shadow-[0_14px_36px_rgb(25_38_28_/_0.06)]">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-[#101713]">Proximos passos</h2>
+        <h2 className="text-base font-semibold text-[#101713]">Próximos passos</h2>
         <TrendingUp size={18} className="text-[#176527]" />
       </div>
       <div className="mt-4 grid gap-3">

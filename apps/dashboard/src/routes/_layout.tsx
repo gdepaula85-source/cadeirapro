@@ -171,6 +171,7 @@ export function DashboardLayout() {
   if (!session) return <Navigate to="/login" replace />;
 
   const shopName = meQuery.data?.organization.name ?? '';
+  const timezone = meQuery.data?.organization.timezone ?? '';
   const themeConfig = (meQuery.data?.organization.themeConfig ?? null) as ThemeConfig | null;
   const userInitials =
     shopName
@@ -267,7 +268,7 @@ export function DashboardLayout() {
           </div>
         ) : null}
         <div className="flex-1 p-4 pb-24 md:p-6 lg:p-8">
-          <Outlet context={{ shopName }} />
+          <Outlet context={{ shopName, timezone }} />
         </div>
       </main>
 
