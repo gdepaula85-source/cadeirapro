@@ -41,6 +41,7 @@ export {
 export { ReviewSchema, CreateReviewInputSchema } from './review';
 export {
   UpdateOrganizationInputSchema,
+  AddressSchema,
   HoursMapSchema,
   HoursWindowSchema,
   ThemeConfigSchema,

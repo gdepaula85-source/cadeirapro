@@ -35,6 +35,10 @@ organizationRouter.patch(
     if (input.primaryPixKey !== undefined) patch.primary_pix_key = input.primaryPixKey;
     if (input.primaryPixKeyType !== undefined) patch.primary_pix_key_type = input.primaryPixKeyType;
     if (input.whatsappPhone !== undefined) patch.whatsapp_phone = input.whatsappPhone;
+    if (input.address !== undefined) patch.address = input.address;
+    if (input.timezone !== undefined) patch.timezone = input.timezone;
+    if (input.logoUrl !== undefined) patch.logo_url = input.logoUrl;
+    if (input.coverUrl !== undefined) patch.cover_url = input.coverUrl;
     if (input.hours !== undefined) patch.hours = input.hours;
     if (input.themeId !== undefined) patch.theme_id = input.themeId;
     if (input.themeConfig !== undefined) patch.theme_config = input.themeConfig;

@@ -14,6 +14,8 @@ export const OrganizationSchema = z.object({
     .object({
       street: z.string(),
       number: z.string(),
+      complement: z.string(),
+      neighborhood: z.string(),
       city: z.string(),
       state: z.string(),
       zip: z.string(),

@@ -10,6 +10,15 @@ const CNPJ_RE = /^\d{14}$/;
 const CPF_RE = /^\d{11}$/;
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((v) => (v === '' ? null : v))
+    .nullable()
+    .optional();
+
 export const HoursWindowSchema = z
   .object({
     open: z.string().regex(HHMM_RE, 'open must be HH:MM'),
@@ -37,14 +46,17 @@ export const ThemeConfigSchema = z
   })
   .strict();
 
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .transform((v) => (v === '' ? null : v))
-    .nullable()
-    .optional();
+export const AddressSchema = z
+  .object({
+    street: optionalText(120),
+    number: optionalText(20),
+    complement: optionalText(80),
+    neighborhood: optionalText(80),
+    city: optionalText(80),
+    state: optionalText(2),
+    zip: optionalText(12),
+  })
+  .strict();
 
 export const UpdateOrganizationInputSchema = z
   .object({
@@ -69,6 +81,10 @@ export const UpdateOrganizationInputSchema = z
       .regex(E164_RE, 'whatsappPhone must be E.164 (e.g. +5511999998888)')
       .nullable()
       .optional(),
+    address: AddressSchema.nullable().optional(),
+    timezone: z.string().trim().min(1).max(80).optional(),
+    logoUrl: z.string().url().nullable().optional(),
+    coverUrl: z.string().url().nullable().optional(),
     hours: HoursMapSchema.optional(),
     themeId: z.string().trim().min(1).max(40).optional(),
     themeConfig: ThemeConfigSchema.optional(),

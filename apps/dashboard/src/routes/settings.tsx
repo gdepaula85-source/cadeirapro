@@ -55,12 +55,21 @@ interface ShopFormState {
   primaryPixKey: string;
   primaryPixKeyType: PixKeyType;
   whatsappPhone: string;
+  timezone: string;
+  street: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zip: string;
 }
 
 interface BrandingFormState {
   primary: string;
   accent: string;
   logoUrl: string;
+  coverUrl: string;
 }
 
 const DEFAULT_DAY: DayState = { enabled: false, open: '09:00', close: '18:00' };
@@ -94,6 +103,7 @@ function hoursStateToMap(state: HoursState): HoursMap {
 }
 
 function shopFromOrg(org: Organization): ShopFormState {
+  const address = (org.address ?? {}) as Record<string, string | null | undefined>;
   return {
     shopName: org.name,
     legalName: org.legalName ?? '',
@@ -101,6 +111,14 @@ function shopFromOrg(org: Organization): ShopFormState {
     primaryPixKey: org.primaryPixKey,
     primaryPixKeyType: org.primaryPixKeyType,
     whatsappPhone: org.whatsappPhone ?? '',
+    timezone: org.timezone ?? 'America/Sao_Paulo',
+    street: address.street ?? '',
+    number: address.number ?? '',
+    complement: address.complement ?? '',
+    neighborhood: address.neighborhood ?? '',
+    city: address.city ?? '',
+    state: address.state ?? '',
+    zip: address.zip ?? '',
   };
 }
 
@@ -109,7 +127,8 @@ function brandingFromOrg(org: Organization): BrandingFormState {
   return {
     primary: cfg.primary ?? DEFAULT_PRIMARY,
     accent: cfg.accent ?? DEFAULT_ACCENT,
-    logoUrl: cfg.logoUrl ?? '',
+    logoUrl: org.logoUrl ?? '',
+    coverUrl: org.coverUrl ?? '',
   };
 }
 
@@ -147,11 +166,14 @@ export function SettingsPage() {
         primaryPixKey: shop.primaryPixKey.trim(),
         primaryPixKeyType: shop.primaryPixKeyType,
         whatsappPhone: shop.whatsappPhone.trim() || null,
+        timezone: shop.timezone,
+        address: cleanAddress(shop),
+        logoUrl: branding.logoUrl.trim() || null,
+        coverUrl: branding.coverUrl.trim() || null,
         hours: hoursStateToMap(hours),
         themeConfig: {
           primary: branding.primary,
           accent: branding.accent,
-          logoUrl: branding.logoUrl.trim() || null,
         },
       };
       return api.organization.update(patch);
@@ -230,7 +252,7 @@ export function SettingsPage() {
           label="Dias abertos"
           value={String(Object.values(hours).filter((day) => day.enabled).length)}
         />
-        <SettingsMetric label="WhatsApp" value={shop.whatsappPhone || t.common.none} />
+        <SettingsMetric label="Cidade" value={shop.city || t.common.none} />
       </section>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -305,6 +327,19 @@ function SettingsMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function cleanAddress(shop: ShopFormState) {
+  const address = {
+    street: shop.street.trim() || null,
+    number: shop.number.trim() || null,
+    complement: shop.complement.trim() || null,
+    neighborhood: shop.neighborhood.trim() || null,
+    city: shop.city.trim() || null,
+    state: shop.state.trim().toUpperCase() || null,
+    zip: shop.zip.replace(/\D/g, '') || null,
+  };
+  return Object.values(address).some(Boolean) ? address : null;
+}
+
 function SettingsPreview({
   shop,
   branding,
@@ -335,11 +370,17 @@ function SettingsPreview({
           </div>
           <p className="mt-4 text-lg font-semibold">{shop.shopName || t.app.name}</p>
           <p className="mt-1 text-sm opacity-75">
-            {shop.whatsappPhone || t.settings.shop.whatsappPhone}
+            {shop.city
+              ? `${shop.city}${shop.state ? `, ${shop.state.toUpperCase()}` : ''}`
+              : shop.whatsappPhone || t.settings.shop.whatsappPhone}
           </p>
         </div>
       </div>
       <div className="mt-4 space-y-2 text-sm text-[var(--color-text-muted)]">
+        <p>
+          Fuso horário:{' '}
+          <span className="font-medium text-[var(--color-text)]">{shop.timezone}</span>
+        </p>
         <p>
           Primeiro dia aberto:{' '}
           <span className="font-medium text-[var(--color-text)]">
@@ -350,6 +391,12 @@ function SettingsPreview({
           Logo:{' '}
           <span className="font-medium text-[var(--color-text)]">
             {branding.logoUrl ? 'configurado' : t.common.none}
+          </span>
+        </p>
+        <p>
+          Capa:{' '}
+          <span className="font-medium text-[var(--color-text)]">
+            {branding.coverUrl ? 'configurada' : t.common.none}
           </span>
         </p>
       </div>
@@ -421,6 +468,66 @@ function ShopTab({ shop, setShop }: { shop: ShopFormState; setShop: (v: ShopForm
         value={shop.whatsappPhone}
         onChange={(e) => setShop({ ...shop, whatsappPhone: e.currentTarget.value })}
       />
+      <SelectField
+        label="Fuso horário"
+        value={shop.timezone}
+        onChange={(e) => setShop({ ...shop, timezone: e.currentTarget.value })}
+        options={[
+          { value: 'America/Sao_Paulo', label: 'Brasília / São Paulo' },
+          { value: 'America/Manaus', label: 'Manaus' },
+          { value: 'America/Fortaleza', label: 'Fortaleza' },
+          { value: 'America/Rio_Branco', label: 'Rio Branco' },
+        ]}
+      />
+      <div className="border-t border-[var(--color-border)] pt-4">
+        <h3 className="text-sm font-semibold text-[var(--color-text)]">Endereço público</h3>
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+          Usado na página pública e nas confirmações de agendamento.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px]">
+          <Field
+            label="Rua"
+            value={shop.street}
+            onChange={(e) => setShop({ ...shop, street: e.currentTarget.value })}
+          />
+          <Field
+            label="Número"
+            value={shop.number}
+            onChange={(e) => setShop({ ...shop, number: e.currentTarget.value })}
+          />
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Field
+            label="Complemento"
+            value={shop.complement}
+            onChange={(e) => setShop({ ...shop, complement: e.currentTarget.value })}
+          />
+          <Field
+            label="Bairro"
+            value={shop.neighborhood}
+            onChange={(e) => setShop({ ...shop, neighborhood: e.currentTarget.value })}
+          />
+          <Field
+            label="Cidade"
+            value={shop.city}
+            onChange={(e) => setShop({ ...shop, city: e.currentTarget.value })}
+          />
+          <div className="grid grid-cols-[96px_1fr] gap-3">
+            <Field
+              label="UF"
+              value={shop.state}
+              maxLength={2}
+              onChange={(e) => setShop({ ...shop, state: e.currentTarget.value.toUpperCase() })}
+            />
+            <Field
+              label="CEP"
+              inputMode="numeric"
+              value={shop.zip}
+              onChange={(e) => setShop({ ...shop, zip: e.currentTarget.value })}
+            />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -531,11 +638,24 @@ function BrandingTab({
         value={branding.logoUrl}
         onChange={(e) => setBranding({ ...branding, logoUrl: e.currentTarget.value })}
       />
+      <Field
+        label="URL da imagem de capa"
+        type="url"
+        placeholder="https://..."
+        helper="Imagem horizontal usada no widget público e na página do cliente."
+        value={branding.coverUrl}
+        onChange={(e) => setBranding({ ...branding, coverUrl: e.currentTarget.value })}
+      />
       <div>
         <Button
           variant="ghost"
           onClick={() =>
-            setBranding({ primary: DEFAULT_PRIMARY, accent: DEFAULT_ACCENT, logoUrl: '' })
+            setBranding({
+              primary: DEFAULT_PRIMARY,
+              accent: DEFAULT_ACCENT,
+              logoUrl: '',
+              coverUrl: '',
+            })
           }
         >
           {t.settings.branding.reset}

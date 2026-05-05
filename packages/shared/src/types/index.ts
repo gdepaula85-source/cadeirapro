@@ -34,6 +34,7 @@ import type {
   ReviewSchema,
   CreateReviewInputSchema,
   UpdateOrganizationInputSchema,
+  AddressSchema,
   HoursMapSchema,
   HoursWindowSchema,
   ThemeConfigSchema,
@@ -73,6 +74,7 @@ export type ScheduleBlockListQuery = z.infer<typeof ScheduleBlockListQuerySchema
 export type Review = z.infer<typeof ReviewSchema>;
 export type CreateReviewInput = z.infer<typeof CreateReviewInputSchema>;
 export type UpdateOrganizationInput = z.infer<typeof UpdateOrganizationInputSchema>;
+export type Address = z.infer<typeof AddressSchema>;
 export type HoursMap = z.infer<typeof HoursMapSchema>;
 export type HoursWindow = z.infer<typeof HoursWindowSchema>;
 export type ThemeConfig = z.infer<typeof ThemeConfigSchema>;
