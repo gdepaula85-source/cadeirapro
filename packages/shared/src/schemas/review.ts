@@ -19,6 +19,9 @@ export const ReviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().nullable(),
   isPublic: z.boolean(),
+  clientName: z.string().nullable().optional(),
+  barberName: z.string().nullable().optional(),
+  serviceName: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

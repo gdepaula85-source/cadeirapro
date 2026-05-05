@@ -92,6 +92,36 @@ clientsRouter.get('/v1/clients/:id', validate('param', IdParamSchema), async (c)
   return c.json({ data: clientToCamel(data) });
 });
 
+clientsRouter.get('/v1/clients/:id/bookings', validate('param', IdParamSchema), async (c) => {
+  const user = c.get('user')!;
+  const supabase = supabaseAsUser(c.get('config'), user.accessToken);
+  const { id } = c.req.valid('param');
+
+  const clientRes = await supabase
+    .from('clients')
+    .select('id')
+    .eq('organization_id', user.organizationId!)
+    .eq('id', id)
+    .is('anonymized_at', null)
+    .maybeSingle();
+  if (clientRes.error) throw new Error(`client_lookup_failed: ${clientRes.error.message}`);
+  if (!clientRes.data) throw new NotFound('client_not_found');
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(
+      'id, organization_id, client_id, barber_id, service_id, starts_at, ends_at, status, source, notes, cancellation_reason, cancelled_at, created_at, updated_at, ' +
+        'clients(name, phone), profiles!bookings_barber_id_fkey(display_name), services(name, duration_minutes, price_cents)',
+    )
+    .eq('organization_id', user.organizationId!)
+    .eq('client_id', id)
+    .order('starts_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw new Error(`client_bookings_lookup_failed: ${error.message}`);
+  return c.json({ data: (data ?? []).map(bookingToCamel) });
+});
+
 clientsRouter.patch(
   '/v1/clients/:id',
   requireRole('owner', 'staff'),
@@ -125,7 +155,7 @@ clientsRouter.patch(
     if (!data) throw new NotFound('client_not_found');
 
     await audit(c, 'client.update', data.id, { fields: Object.keys(patch) });
-    return c.json({ data: { id: data.id, anonymizedAt: data.anonymized_at } });
+    return c.json({ data: clientToCamel(data) });
   },
 );
 
@@ -197,5 +227,49 @@ function clientToCamel(row: Record<string, unknown>) {
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+interface JoinedClient {
+  name?: string;
+  phone?: string;
+}
+
+interface JoinedBarber {
+  display_name?: string;
+}
+
+interface JoinedService {
+  name?: string;
+  duration_minutes?: number;
+  price_cents?: number;
+}
+
+function bookingToCamel(row: unknown) {
+  const r = row as Record<string, unknown>;
+  const clients = r.clients as JoinedClient | null | undefined;
+  const profiles = r.profiles as JoinedBarber | null | undefined;
+  const services = r.services as JoinedService | null | undefined;
+  return {
+    id: r.id as string,
+    organizationId: r.organization_id as string,
+    clientId: r.client_id as string,
+    barberId: r.barber_id as string,
+    serviceId: r.service_id as string,
+    startsAt: r.starts_at as string,
+    endsAt: r.ends_at as string,
+    status: r.status as string,
+    source: r.source as string,
+    notes: (r.notes as string | null) ?? null,
+    cancellationReason: (r.cancellation_reason as string | null) ?? null,
+    cancelledAt: (r.cancelled_at as string | null) ?? null,
+    clientName: clients?.name ?? null,
+    clientPhone: clients?.phone ?? null,
+    barberName: profiles?.display_name ?? null,
+    serviceName: services?.name ?? null,
+    serviceDurationMinutes: services?.duration_minutes ?? null,
+    servicePriceCents: services?.price_cents ?? null,
+    createdAt: r.created_at as string,
+    updatedAt: r.updated_at as string,
   };
 }

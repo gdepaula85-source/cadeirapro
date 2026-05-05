@@ -1,9 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, Mail, Pencil, Phone, Plus, Search, User } from 'lucide-react';
-import type { Client } from '@cadeirapro/shared';
+import { Archive, CalendarDays, Mail, Pencil, Phone, Plus, Search, User } from 'lucide-react';
+import type { Booking, Client } from '@cadeirapro/shared';
 import { api, ApiError } from '../lib/api';
-import { formatPhone } from '../lib/format';
+import { formatBRL, formatPhone } from '../lib/format';
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
 import { t } from '../strings/pt-BR';
@@ -27,11 +27,17 @@ export function ClientsPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [form, setForm] = useState<ClientFormState>(emptyForm);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const clientsQuery = useQuery({
     queryKey: ['clients', search],
     queryFn: () => api.clients.list(search),
+  });
+  const clientBookingsQuery = useQuery({
+    queryKey: ['clients', selectedClientId, 'bookings'],
+    queryFn: () => api.clients.bookings(selectedClientId!),
+    enabled: !!selectedClientId,
   });
 
   const saveMutation = useMutation({
@@ -65,9 +71,11 @@ export function ClientsPage() {
   });
 
   const clients = useMemo(() => clientsQuery.data ?? [], [clientsQuery.data]);
+  const selectedClient = clients.find((client) => client.id === selectedClientId) ?? null;
 
   function edit(client: Client) {
     setError(null);
+    setSelectedClientId(client.id);
     setForm({
       id: client.id,
       name: client.name,
@@ -105,7 +113,7 @@ export function ClientsPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
         <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--color-border)] text-sm font-medium">
             {clientsQuery.isLoading
@@ -119,9 +127,15 @@ export function ClientsPage() {
               {clients.map((client) => (
                 <article
                   key={client.id}
-                  className="p-4 flex flex-col sm:flex-row gap-4 sm:items-center"
+                  className={`p-4 flex flex-col sm:flex-row gap-4 sm:items-center transition ${
+                    selectedClientId === client.id ? 'bg-[var(--color-surface-muted)]' : ''
+                  }`}
                 >
-                  <div className="flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedClientId(client.id)}
+                    className="flex-1 min-w-0 text-left"
+                  >
                     <h2 className="font-medium text-[var(--color-text)] truncate">{client.name}</h2>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-[var(--color-text-muted)]">
                       <span className="inline-flex items-center gap-1">
@@ -140,7 +154,7 @@ export function ClientsPage() {
                         {client.notes}
                       </p>
                     ) : null}
-                  </div>
+                  </button>
                   <div className="flex gap-2">
                     <Button variant="secondary" onClick={() => edit(client)} className="px-3">
                       <Pencil size={14} />
@@ -209,8 +223,109 @@ export function ClientsPage() {
               {form.id ? t.common.save : t.common.create}
             </Button>
           </form>
+
+          <ClientHistoryPanel
+            client={selectedClient}
+            bookings={clientBookingsQuery.data ?? []}
+            loading={clientBookingsQuery.isLoading}
+          />
         </aside>
       </div>
     </div>
   );
+}
+
+function ClientHistoryPanel({
+  client,
+  bookings,
+  loading,
+}: {
+  client: Client | null;
+  bookings: Booking[];
+  loading: boolean;
+}) {
+  const completed = bookings.filter((booking) => booking.status === 'completed');
+  const upcoming = bookings
+    .filter(
+      (booking) =>
+        booking.startsAt >= new Date().toISOString() &&
+        (booking.status === 'pending' || booking.status === 'confirmed'),
+    )
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const totalSpent = completed.reduce((sum, booking) => sum + (booking.servicePriceCents ?? 0), 0);
+
+  return (
+    <section className="mt-5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+      <div className="flex items-center gap-2">
+        <CalendarDays size={16} className="text-[var(--color-text-muted)]" />
+        <h3 className="text-sm font-semibold text-[var(--color-text)]">Historico do cliente</h3>
+      </div>
+      {!client ? (
+        <p className="mt-3 text-sm text-[var(--color-text-muted)]">
+          Selecione um cliente para ver agendamentos, gasto e proximo horario.
+        </p>
+      ) : loading ? (
+        <p className="mt-3 text-sm text-[var(--color-text-muted)]">{t.common.loading}</p>
+      ) : (
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="text-sm font-medium text-[var(--color-text)]">{client.name}</p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              {bookings.length} agendamentos · {completed.length} concluidos ·{' '}
+              {formatBRL(totalSpent)}
+            </p>
+            {upcoming[0] ? (
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                Proximo: {formatDateTime(upcoming[0].startsAt)} com{' '}
+                {upcoming[0].barberName ?? 'barbeiro'}
+              </p>
+            ) : null}
+          </div>
+          {bookings.length === 0 ? (
+            <p className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3 text-sm text-[var(--color-text-muted)]">
+              Nenhum agendamento ainda.
+            </p>
+          ) : (
+            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+              {bookings.slice(0, 12).map((booking) => (
+                <article
+                  key={booking.id}
+                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--color-text)]">
+                        {booking.serviceName ?? 'Servico'}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                        {formatDateTime(booking.startsAt)} · {booking.barberName ?? 'Barbeiro'}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded bg-[var(--color-surface-muted)] px-2 py-1 text-[11px] text-[var(--color-text-muted)]">
+                      {statusLabel(booking.status)}
+                    </span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function statusLabel(status: Booking['status']): string {
+  return t.calendar.status[status];
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+    .format(new Date(value))
+    .replace('.', '');
 }

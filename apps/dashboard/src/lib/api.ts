@@ -127,8 +127,9 @@ export const api = {
       request<Client>('POST', '/v1/clients', input, { idempotent: true }),
     update: (id: string, input: UpdateClientInput) =>
       request<Client>('PATCH', `/v1/clients/${id}`, input, { idempotent: true }),
+    bookings: (id: string) => request<Booking[]>('GET', `/v1/clients/${id}/bookings`),
     archive: (id: string) =>
-      request<{ id: string; anonymizedAt: string }>('DELETE', `/v1/clients/${id}`, undefined, {
+      request<Client>('DELETE', `/v1/clients/${id}`, undefined, {
         idempotent: true,
       }),
   },
@@ -190,6 +191,11 @@ export const api = {
   },
   dashboard: {
     kpis: () => request<DashboardKpis>('GET', '/v1/dashboard/kpis'),
+  },
+  reviews: {
+    list: () => request<Review[]>('GET', '/v1/reviews'),
+    setVisibility: (id: string, isPublic: boolean) =>
+      request<Review>('PATCH', `/v1/reviews/${id}/visibility`, { isPublic }, { idempotent: true }),
   },
   customer: {
     /** Public — no auth header. Creates the auth user and links to clients. */

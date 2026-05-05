@@ -13,6 +13,7 @@ export const t = {
     services: 'Serviços',
     staff: 'Equipe',
     payments: 'Pagamentos',
+    reviews: 'Avaliações',
     settings: 'Configurações',
     signOut: 'Sair',
   },
@@ -189,6 +190,11 @@ export const t = {
       generic: 'Não foi possível salvar o membro.',
       archive: 'Não foi possível desativar o membro.',
       duplicate: 'Já existe uma conta com este e-mail.',
+      validation: 'Confira os dados do membro antes de salvar.',
+      ownerEmail: 'Use um e-mail diferente do proprietário para criar um membro da equipe.',
+      commission: 'Informe uma comissão válida entre 0 e 100.',
+      pixType: 'Selecione o tipo da chave Pix.',
+      scheduleRange: 'O horário de fechamento precisa ser depois da abertura.',
     },
   },
   calendar: {
@@ -293,6 +299,21 @@ export const t = {
       'Em Sprint 3: cada agendamento gera um QR Code Pix com split automático para loja, barbeiro e plataforma no momento do pagamento. Esta tela passa a refletir transações reais.',
     errors: {
       generic: 'Não foi possível carregar os pagamentos.',
+    },
+  },
+  reviews: {
+    title: 'Avaliações',
+    subtitle: 'Acompanhe notas dos clientes e controle quais avaliações aparecem publicamente.',
+    countLabel: 'avaliações',
+    noComment: 'Sem comentário.',
+    public: 'Pública',
+    hidden: 'Oculta',
+    show: 'Mostrar avaliação',
+    hide: 'Ocultar avaliação',
+    metrics: {
+      average: 'Nota média',
+      total: 'Total',
+      public: 'Públicas',
     },
   },
   publicBooking: {

@@ -12,6 +12,7 @@ import {
   Menu,
   Scissors,
   Settings,
+  Star,
   UserCheck,
   Users,
   X,
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/services', label: t.nav.services, icon: Scissors },
   { to: '/staff', label: t.nav.staff, icon: UserCheck },
   { to: '/payments', label: t.nav.payments, icon: CreditCard },
+  { to: '/reviews', label: t.nav.reviews, icon: Star },
   { to: '/settings', label: t.nav.settings, icon: Settings },
 ];
 

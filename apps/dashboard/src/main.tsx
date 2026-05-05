@@ -19,6 +19,7 @@ const LoginPage = lazyNamed(() => import('./routes/login'), 'LoginPage');
 const PaymentsPage = lazyNamed(() => import('./routes/payments'), 'PaymentsPage');
 const PublicBookingPage = lazyNamed(() => import('./routes/public-booking'), 'PublicBookingPage');
 const ResetPasswordPage = lazyNamed(() => import('./routes/reset-password'), 'ResetPasswordPage');
+const ReviewsPage = lazyNamed(() => import('./routes/reviews'), 'ReviewsPage');
 const ServicesPage = lazyNamed(() => import('./routes/services'), 'ServicesPage');
 const SettingsPage = lazyNamed(() => import('./routes/settings'), 'SettingsPage');
 const SignUpDonePage = lazyNamed(() => import('./routes/signup/done'), 'SignUpDonePage');
@@ -92,6 +93,7 @@ const router = createBrowserRouter([
       { path: 'services', element: routeElement(ServicesPage) },
       { path: 'staff', element: routeElement(StaffPage) },
       { path: 'payments', element: routeElement(PaymentsPage) },
+      { path: 'reviews', element: routeElement(ReviewsPage) },
       { path: 'settings', element: routeElement(SettingsPage) },
     ],
   },

@@ -87,6 +87,7 @@ export function StaffPage() {
     queryKey: ['services', false],
     queryFn: () => api.services.list(false),
   });
+  const meQuery = useQuery({ queryKey: ['me'], queryFn: api.me });
 
   const saveMutation = useMutation({
     mutationFn: async (state: StaffFormState) => {
@@ -129,6 +130,10 @@ export function StaffPage() {
     onError: (err) => {
       if (err instanceof ApiError && err.code === 'staff_email_in_use') {
         setError(t.staff.errors.duplicate);
+        return;
+      }
+      if (err instanceof ApiError && err.code === 'validation_failed') {
+        setError(t.staff.errors.validation);
         return;
       }
       setError(t.staff.errors.generic);
@@ -199,6 +204,11 @@ export function StaffPage() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const localError = validateStaffForm(form, meQuery.data?.user.email ?? null);
+    if (localError) {
+      setError(localError);
+      return;
+    }
     saveMutation.mutate(form);
   }
 
@@ -288,7 +298,10 @@ export function StaffPage() {
                         </span>{' '}
                         {t.staff.assignedServicesCount}
                         {member.assignedServiceIds.length > 0 ? (
-                          <span> · {member.assignedServiceIds.slice(0, 3).map(serviceName).join(', ')}</span>
+                          <span>
+                            {' '}
+                            · {member.assignedServiceIds.slice(0, 3).map(serviceName).join(', ')}
+                          </span>
                         ) : null}
                       </div>
                     ) : null}
@@ -522,4 +535,31 @@ export function StaffPage() {
       </div>
     </div>
   );
+}
+
+function validateStaffForm(form: StaffFormState, ownerEmail: string | null): string | null {
+  const email = form.email.trim().toLowerCase();
+  if (!form.id && ownerEmail && email === ownerEmail.trim().toLowerCase()) {
+    return t.staff.errors.ownerEmail;
+  }
+
+  const commissionPct = pctTextToFraction(form.commissionPctText);
+  if (form.commissionPctText.trim() && commissionPct === null) {
+    return t.staff.errors.commission;
+  }
+
+  if (form.pixKey.trim() && !form.pixKeyType) {
+    return t.staff.errors.pixType;
+  }
+
+  if (form.role === 'barber') {
+    for (const windows of Object.values(form.schedule)) {
+      const first = windows?.[0];
+      if (first && first.open >= first.close) {
+        return t.staff.errors.scheduleRange;
+      }
+    }
+  }
+
+  return null;
 }
