@@ -31,3 +31,27 @@ body {
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Customer-facing palette defaults (theme: Verde mata). PublicThemeApplier
+   overrides these on document.documentElement when an org's theme loads.
+   Defaults here prevent a flash of uncolored UI on first render. */
+:root {
+  --cp-bg: #f6f8f5;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #fbfdf9;
+  --cp-surface-dark: #021b15;
+  --cp-surface-dark-hi: #06251c;
+  --cp-text: #101713;
+  --cp-text-muted: #647067;
+  --cp-border: #dfe7dc;
+  --cp-primary: #176527;
+  --cp-primary-hover: #125020;
+  --cp-primary-tint: #edf7e9;
+  --cp-primary-soft: #a8d5a1;
+  --cp-primary-on: #ffffff;
+  --cp-accent: #68c65b;
+  --cp-accent-hover: #77d76b;
+  --cp-accent-soft: #8de47f;
+  --cp-accent-on: #07130a;
+  --cp-danger: #b21f3a;
+}

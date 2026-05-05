@@ -19,12 +19,13 @@ import type {
   HoursWindow,
   Organization,
   PixKeyType,
-  ThemeConfig,
   UpdateOrganizationInput,
 } from '@cadeirapro/shared';
+import { validatePixKeyFormat } from '@cadeirapro/shared';
 import { api, ApiError } from '../lib/api';
 import { Button } from '../components/Button';
 import { Field, SelectField } from '../components/Field';
+import { PRESETS, DEFAULT_THEME_ID, findPreset } from '../lib/themes';
 import { t } from '../strings/pt-BR';
 
 type TabKey = 'shop' | 'hours' | 'branding';
@@ -66,16 +67,12 @@ interface ShopFormState {
 }
 
 interface BrandingFormState {
-  primary: string;
-  accent: string;
+  themeId: string;
   logoUrl: string;
   coverUrl: string;
 }
 
 const DEFAULT_DAY: DayState = { enabled: false, open: '09:00', close: '18:00' };
-
-const DEFAULT_PRIMARY = '#1e293b';
-const DEFAULT_ACCENT = '#f59e0b';
 
 function hoursMapToState(hours: HoursMap | null | undefined): HoursState {
   const out: Partial<HoursState> = {};
@@ -102,6 +99,14 @@ function hoursStateToMap(state: HoursState): HoursMap {
   return out;
 }
 
+function pixKeyError(shop: ShopFormState): string | undefined {
+  const key = shop.primaryPixKey.trim();
+  if (!key) return undefined;
+  return validatePixKeyFormat(key, shop.primaryPixKeyType)
+    ? undefined
+    : t.settings.errors.pixFormat;
+}
+
 function shopFromOrg(org: Organization): ShopFormState {
   const address = (org.address ?? {}) as Record<string, string | null | undefined>;
   return {
@@ -123,10 +128,8 @@ function shopFromOrg(org: Organization): ShopFormState {
 }
 
 function brandingFromOrg(org: Organization): BrandingFormState {
-  const cfg = (org.themeConfig ?? {}) as ThemeConfig;
   return {
-    primary: cfg.primary ?? DEFAULT_PRIMARY,
-    accent: cfg.accent ?? DEFAULT_ACCENT,
+    themeId: org.themeId || DEFAULT_THEME_ID,
     logoUrl: org.logoUrl ?? '',
     coverUrl: org.coverUrl ?? '',
   };
@@ -143,14 +146,35 @@ export function SettingsPage() {
   const [branding, setBranding] = useState<BrandingFormState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState<string | null>(null);
 
   // Hydrate form state once /v1/me lands.
   useEffect(() => {
     if (!org) return;
-    setShop(shopFromOrg(org));
-    setHours(hoursMapToState(org.hours as HoursMap | null | undefined));
-    setBranding(brandingFromOrg(org));
+    const nextShop = shopFromOrg(org);
+    const nextHours = hoursMapToState(org.hours as HoursMap | null | undefined);
+    const nextBranding = brandingFromOrg(org);
+    setShop(nextShop);
+    setHours(nextHours);
+    setBranding(nextBranding);
+    setInitialSnapshot(JSON.stringify({ shop: nextShop, hours: nextHours, branding: nextBranding }));
   }, [org?.id, org?.updatedAt]);
+
+  const dirty = useMemo(() => {
+    if (!shop || !hours || !branding || !initialSnapshot) return false;
+    return JSON.stringify({ shop, hours, branding }) !== initialSnapshot;
+  }, [shop, hours, branding, initialSnapshot]);
+
+  // Native browser warning on close/refresh while dirty.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -158,6 +182,10 @@ export function SettingsPage() {
         return Promise.reject(new Error('settings_not_ready'));
       }
       const digits = shop.document.replace(/\D/g, '');
+      // themeConfig kept in sync with the selected preset so any consumer
+      // still reading themeConfig.primary/accent (e.g. the dashboard's
+      // ThemeApplier) gets sensible values without picking a theme system.
+      const preset = findPreset(branding.themeId);
       const patch: UpdateOrganizationInput = {
         name: shop.shopName.trim(),
         legalName: shop.legalName.trim() || null,
@@ -171,9 +199,10 @@ export function SettingsPage() {
         logoUrl: branding.logoUrl.trim() || null,
         coverUrl: branding.coverUrl.trim() || null,
         hours: hoursStateToMap(hours),
+        themeId: branding.themeId,
         themeConfig: {
-          primary: branding.primary,
-          accent: branding.accent,
+          primary: preset.palette.primary,
+          accent: preset.palette.accent,
         },
       };
       return api.organization.update(patch);
@@ -197,6 +226,14 @@ export function SettingsPage() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (shop) {
+      const pixErr = pixKeyError(shop);
+      if (pixErr) {
+        setError(pixErr);
+        setTab('shop');
+        return;
+      }
+    }
     saveMutation.mutate();
   }
 
@@ -303,8 +340,19 @@ export function SettingsPage() {
               </div>
             ) : null}
 
-            <div className="flex justify-end">
-              <Button type="submit" loading={saveMutation.isPending}>
+            <div className="flex items-center justify-between gap-3">
+              {dirty && !saved ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]"
+                    aria-hidden
+                  />
+                  {t.settings.unsavedChanges}
+                </span>
+              ) : (
+                <span />
+              )}
+              <Button type="submit" loading={saveMutation.isPending} disabled={!dirty}>
                 {saveMutation.isPending ? t.settings.saving : t.settings.save}
               </Button>
             </div>
@@ -357,25 +405,7 @@ function SettingsPreview({
         <Palette size={16} />
         <h2 className="text-sm font-semibold text-[var(--color-text)]">Prévia da loja</h2>
       </div>
-      <div
-        className="mt-4 overflow-hidden rounded-lg border border-[var(--color-border)]"
-        style={{ background: branding.primary, color: '#fff' }}
-      >
-        <div className="p-4">
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-md text-sm font-bold"
-            style={{ background: branding.accent, color: '#111827' }}
-          >
-            CP
-          </div>
-          <p className="mt-4 text-lg font-semibold">{shop.shopName || t.app.name}</p>
-          <p className="mt-1 text-sm opacity-75">
-            {shop.city
-              ? `${shop.city}${shop.state ? `, ${shop.state.toUpperCase()}` : ''}`
-              : shop.whatsappPhone || t.settings.shop.whatsappPhone}
-          </p>
-        </div>
-      </div>
+      <ThemePreview branding={branding} shop={shop} />
       <div className="mt-4 space-y-2 text-sm text-[var(--color-text-muted)]">
         <p>
           Fuso horário:{' '}
@@ -406,6 +436,7 @@ function SettingsPreview({
 
 function ShopTab({ shop, setShop }: { shop: ShopFormState; setShop: (v: ShopFormState) => void }) {
   const docDigits = useMemo(() => shop.document.replace(/\D/g, ''), [shop.document]);
+  const pixErr = pixKeyError(shop);
   const docHelp =
     docDigits.length === 14
       ? t.settings.shop.cnpjHelp
@@ -458,6 +489,8 @@ function ShopTab({ shop, setShop }: { shop: ShopFormState; setShop: (v: ShopForm
         required
         value={shop.primaryPixKey}
         onChange={(e) => setShop({ ...shop, primaryPixKey: e.currentTarget.value })}
+        error={pixErr}
+        helper={pixErr ? undefined : t.settings.shop.primaryPixKeyHelp[shop.primaryPixKeyType]}
       />
       <Field
         label={t.settings.shop.whatsappPhone}
@@ -611,93 +644,130 @@ function BrandingTab({
   setBranding: (v: BrandingFormState) => void;
 }) {
   return (
-    <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5 space-y-4">
+    <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5 space-y-5">
       <div>
         <h2 className="text-base font-semibold">{t.settings.branding.heading}</h2>
         <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          {t.settings.branding.description}
+          {t.settings.branding.themePickerHelp}
         </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <ColorField
-          label={t.settings.branding.primaryColor}
-          value={branding.primary}
-          onChange={(v) => setBranding({ ...branding, primary: v })}
-        />
-        <ColorField
-          label={t.settings.branding.accentColor}
-          value={branding.accent}
-          onChange={(v) => setBranding({ ...branding, accent: v })}
-        />
-      </div>
-      <Field
-        label={t.settings.branding.logoUrl}
-        type="url"
-        placeholder="https://..."
-        helper={t.settings.branding.logoUrlHelp}
-        value={branding.logoUrl}
-        onChange={(e) => setBranding({ ...branding, logoUrl: e.currentTarget.value })}
-      />
-      <Field
-        label="URL da imagem de capa"
-        type="url"
-        placeholder="https://..."
-        helper="Imagem horizontal usada no widget público e na página do cliente."
-        value={branding.coverUrl}
-        onChange={(e) => setBranding({ ...branding, coverUrl: e.currentTarget.value })}
-      />
+
       <div>
-        <Button
-          variant="ghost"
-          onClick={() =>
-            setBranding({
-              primary: DEFAULT_PRIMARY,
-              accent: DEFAULT_ACCENT,
-              logoUrl: '',
-              coverUrl: '',
-            })
-          }
-        >
-          {t.settings.branding.reset}
-        </Button>
+        <h3 className="text-sm font-semibold text-[var(--color-text)] mb-3">
+          {t.settings.branding.themePickerHeading}
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {PRESETS.map((preset) => {
+            const selected = branding.themeId === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => setBranding({ ...branding, themeId: preset.id })}
+                className={`relative rounded-lg border p-3 text-left transition ${
+                  selected
+                    ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30'
+                    : 'border-[var(--color-border)] hover:border-[var(--color-text-muted)]'
+                }`}
+                aria-pressed={selected}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-7 w-7 shrink-0 rounded-md border border-black/5"
+                    style={{ background: preset.palette.primary }}
+                    aria-hidden
+                  />
+                  <div
+                    className="h-7 w-7 shrink-0 rounded-md border border-black/5"
+                    style={{ background: preset.palette.accent }}
+                    aria-hidden
+                  />
+                  <div
+                    className="h-7 w-7 shrink-0 rounded-md border border-black/5"
+                    style={{ background: preset.palette.surfaceDark }}
+                    aria-hidden
+                  />
+                  <div className="ml-auto text-xs text-[var(--color-text-muted)]">
+                    {selected ? t.settings.branding.themeSelected : ''}
+                  </div>
+                </div>
+                <p className="mt-3 text-sm font-medium text-[var(--color-text)]">
+                  {preset.name}
+                </p>
+                <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                  {preset.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--color-border)] pt-5 space-y-4">
+        <h3 className="text-sm font-semibold text-[var(--color-text)]">
+          {t.settings.branding.imagesHeading}
+        </h3>
+        <Field
+          label={t.settings.branding.logoUrl}
+          type="url"
+          placeholder="https://..."
+          helper={t.settings.branding.logoUrlHelp}
+          value={branding.logoUrl}
+          onChange={(e) => setBranding({ ...branding, logoUrl: e.currentTarget.value })}
+        />
+        <Field
+          label={t.settings.branding.coverUrl}
+          type="url"
+          placeholder="https://..."
+          helper={t.settings.branding.coverUrlHelp}
+          value={branding.coverUrl}
+          onChange={(e) => setBranding({ ...branding, coverUrl: e.currentTarget.value })}
+        />
       </div>
     </section>
   );
 }
 
-function ColorField({
-  label,
-  value,
-  onChange,
+function ThemePreview({
+  branding,
+  shop,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
+  branding: BrandingFormState;
+  shop: ShopFormState;
 }) {
+  const preset = findPreset(branding.themeId);
+  const p = preset.palette;
   return (
-    <label className="block">
-      <span className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{label}</span>
-      <div className="flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2">
-        <input
-          type="color"
-          className="h-7 w-9 cursor-pointer rounded border-0 bg-transparent p-0"
-          value={value}
-          onChange={(e) => onChange(e.currentTarget.value)}
-        />
-        <input
-          type="text"
-          className="flex-1 bg-transparent text-sm font-mono outline-none"
-          value={value}
-          onChange={(e) => {
-            const v = e.currentTarget.value;
-            if (/^#?[0-9a-fA-F]{0,6}$/.test(v)) {
-              onChange(v.startsWith('#') ? v : `#${v}`);
-            }
-          }}
-          maxLength={7}
-        />
+    <div
+      className="mt-4 overflow-hidden rounded-lg border"
+      style={{ borderColor: p.border, background: p.bg }}
+    >
+      <div className="p-4">
+        <div
+          className="flex h-11 w-11 items-center justify-center rounded-md text-sm font-bold"
+          style={{ background: p.primary, color: p.primaryOn }}
+        >
+          {(shop.shopName || 'CP').slice(0, 2).toUpperCase()}
+        </div>
+        <p className="mt-4 text-lg font-semibold" style={{ color: p.text }}>
+          {shop.shopName || t.app.name}
+        </p>
+        <p className="mt-1 text-sm" style={{ color: p.textMuted }}>
+          {shop.city
+            ? `${shop.city}${shop.state ? `, ${shop.state.toUpperCase()}` : ''}`
+            : shop.whatsappPhone || t.settings.shop.whatsappPhone}
+        </p>
+        <button
+          type="button"
+          className="mt-4 w-full rounded-md px-4 py-2 text-sm font-semibold"
+          style={{ background: p.accent, color: p.accentOn }}
+          tabIndex={-1}
+          aria-hidden
+        >
+          {t.settings.branding.previewCta}
+        </button>
       </div>
-    </label>
+    </div>
   );
 }
 

@@ -19,7 +19,9 @@ interface JwtPayload {
   sub?: string;
   email?: string;
   organization_id?: string;
-  role?: 'owner' | 'barber' | 'staff' | 'customer';
+  // App role lives in user_role — the reserved 'role' claim is the PostgreSQL
+  // role for PostgREST and must stay 'authenticated' (see migration 0006).
+  user_role?: 'owner' | 'barber' | 'staff' | 'customer';
   exp?: number;
 }
 
@@ -63,11 +65,19 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
     });
   }
 
-  // requireAuth is for owner/staff/barber. Customer JWTs (role='customer')
-  // would have failed the organization_id check above, so payload.role here
-  // should never be 'customer' — the filter is belt-and-braces.
-  const ownerRole =
-    payload.role && payload.role !== 'customer' ? payload.role : null;
+  // user_role is set by the same hook that injects organization_id, so they
+  // should arrive together. If org is present but user_role is not, the JWT
+  // is incomplete — treat as claims_missing too so the dashboard auto-refresh
+  // kicks in. A 403 here would not trigger refresh and the user would be
+  // stuck. Customer JWTs (user_role='customer') would have failed the org_id
+  // check above and never reach this point.
+  if (!payload.user_role) {
+    throw new Unauthorized('claims_missing', {
+      hint: 'JWT lacks user_role; call supabase.auth.refreshSession() and retry',
+    });
+  }
+
+  const ownerRole = payload.user_role !== 'customer' ? payload.user_role : null;
   const user: AuthUser = {
     id: data.user.id,
     email: data.user.email ?? '',
@@ -111,7 +121,7 @@ export const requireCustomerAuth: MiddlewareHandler<AppEnv> = async (c, next) =>
   if (authErr || !authData.user) throw new Unauthorized('unauthorized');
 
   const payload = decodeJwtPayload(token);
-  if (payload.role !== 'customer') {
+  if (payload.user_role !== 'customer') {
     throw new Forbidden('not_a_customer', { hint: 'this endpoint is for customer accounts only' });
   }
 

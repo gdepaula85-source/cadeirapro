@@ -27,6 +27,7 @@ import type {
 } from '@cadeirapro/shared';
 import { api, ApiError } from '../lib/api';
 import { Button } from '../components/Button';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Field, SelectField } from '../components/Field';
 import { t } from '../strings/pt-BR';
 
@@ -81,6 +82,7 @@ export function StaffPage() {
   const [form, setForm] = useState<StaffFormState>(emptyForm);
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Staff | null>(null);
 
   const staffQuery = useQuery({
     queryKey: ['staff', includeInactive],
@@ -146,8 +148,14 @@ export function StaffPage() {
 
   const archiveMutation = useMutation({
     mutationFn: (id: string) => api.staff.archive(id),
-    onSuccess: async () => qc.invalidateQueries({ queryKey: ['staff'] }),
-    onError: () => setError(t.staff.errors.archive),
+    onSuccess: async () => {
+      setArchiveTarget(null);
+      await qc.invalidateQueries({ queryKey: ['staff'] });
+    },
+    onError: () => {
+      setArchiveTarget(null);
+      setError(t.staff.errors.archive);
+    },
   });
 
   const sorted = useMemo(() => staffQuery.data ?? [], [staffQuery.data]);
@@ -260,7 +268,19 @@ export function StaffPage() {
               ? t.common.loading
               : `${sorted.length} ${t.staff.title.toLowerCase()}`}
           </div>
-          {sorted.length === 0 && !staffQuery.isLoading ? (
+          {staffQuery.isLoading ? (
+            <div className="divide-y divide-[var(--color-border)]">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-4 flex flex-col sm:flex-row gap-4 sm:items-center animate-pulse">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-1/3 rounded bg-[var(--color-surface-muted)]" />
+                    <div className="h-3 w-2/3 rounded bg-[var(--color-surface-muted)]" />
+                  </div>
+                  <div className="h-8 w-20 rounded bg-[var(--color-surface-muted)]" />
+                </div>
+              ))}
+            </div>
+          ) : sorted.length === 0 ? (
             <div className="p-8 text-sm text-[var(--color-text-muted)]">{t.common.empty}</div>
           ) : (
             <div className="divide-y divide-[var(--color-border)]">
@@ -276,13 +296,24 @@ export function StaffPage() {
                     onClick={() => setSelectedStaffId(member.id)}
                     className="flex-1 min-w-0 text-left"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="font-medium text-[var(--color-text)] truncate">
                         {member.displayName}
                       </h2>
                       <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]">
                         {member.role === 'staff' ? <UserCheck size={11} /> : <Scissors size={11} />}
                         {member.role === 'staff' ? t.staff.roles.staff : t.staff.roles.barber}
+                      </span>
+                      <span
+                        className={`text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 ${
+                          member.partnerStatus === 'employee'
+                            ? 'bg-[#edf7e9] text-[#176527]'
+                            : 'bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]'
+                        }`}
+                      >
+                        {member.partnerStatus === 'employee'
+                          ? t.staff.partnerStatusOptions.employee
+                          : t.staff.partnerStatusOptions.parceiro}
                       </span>
                       {!member.isActive ? (
                         <span className="text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 bg-[var(--color-surface-muted)] text-[var(--color-text-muted)]">
@@ -342,9 +373,13 @@ export function StaffPage() {
                       <Button
                         variant="ghost"
                         onClick={() => {
-                          if (window.confirm(t.staff.archiveConfirm))
-                            archiveMutation.mutate(member.id);
+                          setError(null);
+                          setArchiveTarget(member);
                         }}
+                        loading={
+                          archiveMutation.isPending &&
+                          archiveMutation.variables === member.id
+                        }
                         className="px-3"
                       >
                         <UserX size={14} />
@@ -406,6 +441,22 @@ export function StaffPage() {
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.currentTarget.value })}
             />
+            <label className="block">
+              <span className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
+                {t.staff.bio}
+              </span>
+              <textarea
+                className="block w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/30 focus:border-[var(--color-accent)] transition-colors"
+                rows={3}
+                maxLength={500}
+                placeholder={t.staff.bioPlaceholder}
+                value={form.bio}
+                onChange={(e) => setForm({ ...form, bio: e.currentTarget.value })}
+              />
+              <span className="mt-1 text-xs text-[var(--color-text-muted)]">
+                {t.staff.bioHelp} · {form.bio.length}/500
+              </span>
+            </label>
             <SelectField
               label={t.staff.partnerStatus}
               value={form.partnerStatus}
@@ -559,6 +610,27 @@ export function StaffPage() {
           />
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={!!archiveTarget}
+        title={t.staff.archiveConfirm}
+        body={
+          archiveTarget ? (
+            <>
+              <span className="text-[var(--color-text)] font-medium">
+                {archiveTarget.displayName}
+              </span>{' '}
+              {t.staff.archiveDialogBody}
+            </>
+          ) : null
+        }
+        confirmLabel={t.common.archive}
+        cancelLabel={t.common.cancel}
+        variant="danger"
+        loading={archiveMutation.isPending}
+        onConfirm={() => archiveTarget && archiveMutation.mutate(archiveTarget.id)}
+        onCancel={() => setArchiveTarget(null)}
+      />
     </div>
   );
 }

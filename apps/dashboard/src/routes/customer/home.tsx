@@ -1,4 +1,4 @@
-// Customer home at /[slug] — auth-gated placeholder. The full design (mock
+﻿// Customer home at /[slug] â€” auth-gated placeholder. The full design (mock
 // screen 2: greeting, featured barbers, categories, search, referral promo,
 // bottom nav) lands in subsequent commits as the supporting subsystems
 // (reviews, loyalty, referrals, categories taxonomy) come online.
@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, LogOut, UserRound } from 'lucide-react';
 import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { PublicThemeApplier } from '../../components/PublicThemeApplier';
 
 export function CustomerHomePage() {
   const { slug = '' } = useParams<{ slug: string }>();
@@ -25,7 +26,7 @@ export function CustomerHomePage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#fbfdf9] text-sm text-[#647067]">
+      <main className="flex min-h-screen items-center justify-center bg-[var(--cp-surface-soft)] text-sm text-[var(--cp-text-muted)]">
         ...
       </main>
     );
@@ -35,73 +36,77 @@ export function CustomerHomePage() {
 
   // The hook injects role='customer' only for users linked to a clients row.
   // If /v1/customer/me 403s with not_a_customer, this session belongs to a
-  // shop owner who navigated here by accident — punt to their dashboard.
+  // shop owner who navigated here by accident â€” punt to their dashboard.
   if (meQuery.error instanceof ApiError && meQuery.error.code === 'not_a_customer') {
     return <Navigate to="/" replace />;
   }
 
   const me = meQuery.data;
+  const themeId = me?.organization.themeId ?? null;
 
   return (
-    <main className="min-h-screen bg-[#fbfdf9] px-6 py-8">
+    <>
+    <PublicThemeApplier themeId={themeId} />
+    <main className="min-h-screen bg-[var(--cp-surface-soft)] px-6 py-8">
       <div className="mx-auto w-full max-w-md">
         <header className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#647067]">
-              {me?.organization.name ?? 'Carregando…'}
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cp-text-muted)]">
+              {me?.organization.name ?? 'Carregandoâ€¦'}
             </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#101713]">
-              {me ? `Olá, ${firstName(me.customer.name)}!` : 'Olá!'}
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--cp-text)]">
+              {me ? `OlÃ¡, ${firstName(me.customer.name)}!` : 'OlÃ¡!'}
             </h1>
-            <p className="mt-1 text-sm text-[#647067]">Bem-vindo de volta à sua barbearia.</p>
+            <p className="mt-1 text-sm text-[var(--cp-text-muted)]">Bem-vindo de volta a sua barbearia.</p>
           </div>
           <button
             type="button"
             onClick={() => signOut()}
-            className="rounded-full border border-[#dfe7dc] bg-white p-2 text-[#647067] transition hover:border-[#176527] hover:text-[#176527]"
+            className="rounded-full border border-[var(--cp-border)] bg-white p-2 text-[var(--cp-text-muted)] transition hover:border-[var(--cp-primary)] hover:text-[var(--cp-primary)]"
             aria-label="Sair"
           >
             <LogOut size={16} />
           </button>
         </header>
 
-        <section className="mt-8 rounded-[28px] border border-[#dfe7dc] bg-white p-6 shadow-[0_14px_36px_rgb(25_38_28_/_0.06)]">
+        <section className="mt-8 rounded-[28px] border border-[var(--cp-border)] bg-white p-6 shadow-[0_14px_36px_rgb(25_38_28_/_0.06)]">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#edf7e9] text-[#176527]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--cp-primary-tint)] text-[var(--cp-primary)]">
               <CalendarDays size={20} />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-[#101713]">Pronto para agendar?</p>
-              <p className="text-xs text-[#647067]">Reserve um horário com seu barbeiro.</p>
+              <p className="text-sm font-semibold text-[var(--cp-text)]">Pronto para agendar?</p>
+              <p className="text-xs text-[var(--cp-text-muted)]">Reserve um horÃ¡rio com seu barbeiro.</p>
             </div>
           </div>
           <Link
             to={`/book/${slug}`}
-            className="mt-5 block w-full rounded-2xl bg-[#176527] py-3 text-center text-sm font-semibold text-white transition hover:bg-[#125020]"
+            className="mt-5 block w-full rounded-2xl bg-[var(--cp-primary)] py-3 text-center text-sm font-semibold text-white transition hover:bg-[var(--cp-primary-hover)]"
           >
             Reservar agora
           </Link>
         </section>
 
-        <section className="mt-6 rounded-[28px] border border-[#dfe7dc] bg-white p-5 shadow-[0_14px_36px_rgb(25_38_28_/_0.06)]">
+        <section className="mt-6 rounded-[28px] border border-[var(--cp-border)] bg-white p-5 shadow-[0_14px_36px_rgb(25_38_28_/_0.06)]">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#edf7e9] text-[#176527]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--cp-primary-tint)] text-[var(--cp-primary)]">
               <UserRound size={20} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-[#101713]">Seu perfil</p>
-              <p className="text-xs text-[#647067]">Historico, gastos e proximos horarios.</p>
+              <p className="text-sm font-semibold text-[var(--cp-text)]">Seu perfil</p>
+              <p className="text-xs text-[var(--cp-text-muted)]">Historico, gastos e proximos horarios.</p>
             </div>
           </div>
           <Link
             to={`/${slug}/profile`}
-            className="mt-5 block w-full rounded-2xl border border-[#dfe7dc] bg-white py-3 text-center text-sm font-semibold text-[#176527] transition hover:border-[#176527]"
+            className="mt-5 block w-full rounded-2xl border border-[var(--cp-border)] bg-white py-3 text-center text-sm font-semibold text-[var(--cp-primary)] transition hover:border-[var(--cp-primary)]"
           >
             Ver meu historico
           </Link>
         </section>
       </div>
     </main>
+    </>
   );
 }
 

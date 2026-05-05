@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+﻿import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   CheckCircle2,
@@ -15,6 +15,7 @@ import type { AvailabilitySlot } from '@cadeirapro/shared';
 import { api, ApiError, type PublicBarber, type PublicService } from '../lib/api';
 import { formatBRL } from '../lib/format';
 import { Field } from '../components/Field';
+import { PublicThemeApplier } from '../components/PublicThemeApplier';
 import { t } from '../strings/pt-BR';
 
 interface FormState {
@@ -118,24 +119,28 @@ export function PublicBookingPage() {
     bookingMutation.mutate();
   }
 
+  const themeId = orgQuery.data?.themeId ?? null;
+
   if (orgQuery.isLoading) return <LoadingState label={copy.loadingShop} />;
   if (orgQuery.error) return <NotFoundState label={copy.errors.notFound} />;
 
   if (bookingMutation.isSuccess) {
     return (
-      <main className="min-h-screen bg-[#f6f8f5] px-4 py-8 text-[#101713]">
+      <>
+        <PublicThemeApplier themeId={themeId} />
+        <main className="min-h-screen bg-[var(--cp-bg)] px-4 py-8 text-[var(--cp-text)]">
         <section className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center">
-          <div className="rounded-[28px] border border-[#dfe7dc] bg-white p-6 text-center shadow-[0_24px_70px_rgb(20_42_25_/_0.12)]">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#dff5d7] text-[#176527]">
+          <div className="rounded-[28px] border border-[var(--cp-border)] bg-white p-6 text-center shadow-[0_24px_70px_rgb(20_42_25_/_0.12)]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--cp-primary-tint)] text-[var(--cp-primary)]">
               <CheckCircle2 size={34} />
             </div>
-            <h1 className="mt-5 text-2xl font-semibold tracking-tight text-[#101713]">
+            <h1 className="mt-5 text-2xl font-semibold tracking-tight text-[var(--cp-text)]">
               {copy.confirmedTitle}
             </h1>
-            <p className="mt-2 text-sm leading-6 text-[#5f6b62]">{copy.confirmedBody}</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--cp-text-muted)]">{copy.confirmedBody}</p>
             <button
               type="button"
-              className="mt-7 h-13 w-full rounded-[18px] bg-[#6fc764] px-5 text-sm font-semibold text-[#07130a] shadow-[0_14px_30px_rgb(45_130_55_/_0.25)] transition hover:bg-[#79d46c]"
+              className="mt-7 h-13 w-full rounded-[18px] bg-[var(--cp-accent)] px-5 text-sm font-semibold text-[var(--cp-accent-on)] shadow-[0_14px_30px_rgb(45_130_55_/_0.25)] transition hover:bg-[var(--cp-accent-hover)]"
               onClick={() => {
                 setForm(emptyForm());
                 bookingMutation.reset();
@@ -145,12 +150,15 @@ export function PublicBookingPage() {
             </button>
           </div>
         </section>
-      </main>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f8f5] px-3 py-4 text-[#101713] sm:px-6 sm:py-8">
+    <>
+      <PublicThemeApplier themeId={themeId} />
+      <main className="min-h-screen bg-[var(--cp-bg)] px-3 py-4 text-[var(--cp-text)] sm:px-6 sm:py-8">
       <section className="mx-auto grid w-full min-w-0 max-w-6xl gap-5 lg:grid-cols-[410px_minmax(0,1fr)] lg:items-start">
         <BrandPanel
           shopName={shopName}
@@ -163,7 +171,7 @@ export function PublicBookingPage() {
 
         <form
           onSubmit={submit}
-          className="w-full min-w-0 rounded-[30px] border border-[#dfe7dc] bg-white p-4 shadow-[0_20px_60px_rgb(25_38_28_/_0.08)] sm:p-6"
+          className="w-full min-w-0 rounded-[30px] border border-[var(--cp-border)] bg-white p-4 shadow-[0_20px_60px_rgb(25_38_28_/_0.08)] sm:p-6"
         >
           <Header shopName={shopName} />
 
@@ -220,13 +228,14 @@ export function PublicBookingPage() {
           />
         </form>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 
 function LoadingState({ label }: { label: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f6f8f5] px-4 text-sm text-[#5f6b62]">
+    <main className="flex min-h-screen items-center justify-center bg-[var(--cp-bg)] px-4 text-sm text-[var(--cp-text-muted)]">
       <Loader2 className="mr-2 animate-spin" size={18} />
       {label}
     </main>
@@ -235,10 +244,10 @@ function LoadingState({ label }: { label: string }) {
 
 function NotFoundState({ label }: { label: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f6f8f5] px-4">
-      <div className="w-full max-w-md rounded-[28px] border border-[#dfe7dc] bg-white p-8 text-center shadow-[0_20px_60px_rgb(25_38_28_/_0.08)]">
-        <Scissors className="mx-auto mb-3 text-[#5f6b62]" size={28} />
-        <h1 className="text-lg font-semibold text-[#101713]">{label}</h1>
+    <main className="flex min-h-screen items-center justify-center bg-[var(--cp-bg)] px-4">
+      <div className="w-full max-w-md rounded-[28px] border border-[var(--cp-border)] bg-white p-8 text-center shadow-[0_20px_60px_rgb(25_38_28_/_0.08)]">
+        <Scissors className="mx-auto mb-3 text-[var(--cp-text-muted)]" size={28} />
+        <h1 className="text-lg font-semibold text-[var(--cp-text)]">{label}</h1>
       </div>
     </main>
   );
@@ -248,16 +257,16 @@ function Header({ shopName }: { shopName: string }) {
   return (
     <header className="flex items-start justify-between gap-4">
       <div>
-        <div className="inline-flex items-center gap-2 rounded-full bg-[#edf7e9] px-3 py-1 text-xs font-semibold text-[#176527]">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[var(--cp-primary-tint)] px-3 py-1 text-xs font-semibold text-[var(--cp-primary)]">
           <Sparkles size={13} />
           CadeiraPro
         </div>
-        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[#101713] sm:text-3xl">
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-[var(--cp-text)] sm:text-3xl">
           {shopName}
         </h1>
-        <p className="mt-1 max-w-xl text-sm leading-6 text-[#5f6b62]">{t.publicBooking.subtitle}</p>
+        <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--cp-text-muted)]">{t.publicBooking.subtitle}</p>
       </div>
-      <div className="hidden rounded-full border border-[#dfe7dc] bg-white p-3 text-[#176527] shadow-sm sm:block">
+      <div className="hidden rounded-full border border-[var(--cp-border)] bg-white p-3 text-[var(--cp-primary)] shadow-sm sm:block">
         <Scissors size={20} />
       </div>
     </header>
@@ -280,7 +289,7 @@ function BrandPanel({
   selectedSlot: AvailabilitySlot | null;
 }) {
   return (
-    <aside className="w-full min-w-0 overflow-hidden rounded-[34px] bg-[#021b15] text-white shadow-[0_28px_80px_rgb(2_27_21_/_0.24)] lg:sticky lg:top-6">
+    <aside className="w-full min-w-0 overflow-hidden rounded-[34px] bg-[var(--cp-surface-dark)] text-white shadow-[0_28px_80px_rgb(2_27_21_/_0.24)] lg:sticky lg:top-6">
       <div
         className="relative flex min-h-[360px] flex-col justify-between p-6"
         style={
@@ -293,7 +302,7 @@ function BrandPanel({
             : undefined
         }
       >
-        <div className="pointer-events-none absolute inset-0 opacity-30 [background:radial-gradient(circle_at_20%_20%,#75d76f_0,transparent_24%),linear-gradient(135deg,transparent_0_20%,rgb(255_255_255_/_0.16)_20%_21%,transparent_21%_100%)]" />
+        <div className="pointer-events-none absolute inset-0 opacity-30 [background:radial-gradient(circle_at_20%_20%,var(--cp-accent-hover)_0,transparent_24%),linear-gradient(135deg,transparent_0_20%,rgb(255_255_255_/_0.16)_20%_21%,transparent_21%_100%)]" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
             {logoUrl ? (
@@ -305,7 +314,7 @@ function BrandPanel({
             )}
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-white/55">Cadeira</p>
-              <p className="text-sm font-semibold tracking-[0.35em] text-[#8de47f]">PRO</p>
+              <p className="text-sm font-semibold tracking-[0.35em] text-[var(--cp-accent-soft)]">PRO</p>
             </div>
           </div>
           <div className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/75">9:41</div>
@@ -356,7 +365,7 @@ function SummaryLine({
   return (
     <div className="flex items-center justify-between gap-3 rounded-[18px] border border-white/10 bg-white/8 px-4 py-3">
       <div className="flex min-w-0 items-center gap-2 text-white/85">
-        <span className="text-[#8de47f]">{icon}</span>
+        <span className="text-[var(--cp-accent-soft)]">{icon}</span>
         <span className="truncate text-sm font-medium">{label}</span>
       </div>
       <span className="shrink-0 text-xs text-white/55">{value}</span>
@@ -394,11 +403,11 @@ function ServiceStep({
             onClick={() => onSelect(service.id)}
             className={`group grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-4 rounded-[22px] border p-3 text-left transition ${
               selectedId === service.id
-                ? 'border-[#176527] bg-[#f0faec] shadow-[0_14px_30px_rgb(45_130_55_/_0.14)]'
-                : 'border-[#e4ebe1] bg-white hover:border-[#a8d5a1] hover:bg-[#fbfdf9]'
+                ? 'border-[var(--cp-primary)] bg-[var(--cp-primary-tint)] shadow-[0_14px_30px_rgb(45_130_55_/_0.14)]'
+                : 'border-[var(--cp-border)] bg-white hover:border-[var(--cp-primary-soft)] hover:bg-[var(--cp-surface-soft)]'
             }`}
           >
-            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[18px] bg-[#eef5eb] text-[#101713]">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[18px] bg-[var(--cp-primary-tint)] text-[var(--cp-text)]">
               {service.photoUrl ? (
                 <img
                   src={service.photoUrl}
@@ -411,23 +420,23 @@ function ServiceStep({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="truncate text-base font-semibold text-[#101713]">{service.name}</h3>
+                <h3 className="truncate text-base font-semibold text-[var(--cp-text)]">{service.name}</h3>
               </div>
-              <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#647067]">
+              <p className="mt-1 line-clamp-2 text-sm leading-5 text-[var(--cp-text-muted)]">
                 {service.description || t.publicBooking.subtitle}
               </p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-[#647067]">
+              <div className="mt-2 flex items-center gap-2 text-xs text-[var(--cp-text-muted)]">
                 <Clock3 size={14} />
                 <span>{service.durationMinutes} min</span>
               </div>
             </div>
             <div className="flex flex-col items-end gap-3">
-              <span className="text-sm font-semibold text-[#101713]">
+              <span className="text-sm font-semibold text-[var(--cp-text)]">
                 {formatBRL(service.priceCents)}
               </span>
               <ChevronRight
                 size={18}
-                className={selectedId === service.id ? 'text-[#176527]' : 'text-[#a4afa7]'}
+                className={selectedId === service.id ? 'text-[var(--cp-primary)]' : 'text-[var(--cp-text-muted)]'}
               />
             </div>
           </button>
@@ -466,8 +475,8 @@ function BarberStep({
             onClick={() => onSelect(barber.id)}
             className={`rounded-[24px] border p-4 text-left transition ${
               selectedId === barber.id
-                ? 'border-[#176527] bg-[#06251c] text-white shadow-[0_14px_35px_rgb(6_37_28_/_0.22)]'
-                : 'border-[#e4ebe1] bg-white text-[#101713] hover:border-[#a8d5a1]'
+                ? 'border-[var(--cp-primary)] bg-[var(--cp-surface-dark-hi)] text-white shadow-[0_14px_35px_rgb(6_37_28_/_0.22)]'
+                : 'border-[var(--cp-border)] bg-white text-[var(--cp-text)] hover:border-[var(--cp-primary-soft)]'
             }`}
           >
             <div className="flex items-center gap-3">
@@ -481,8 +490,8 @@ function BarberStep({
                 <div
                   className={`flex h-14 w-14 items-center justify-center rounded-full ${
                     selectedId === barber.id
-                      ? 'bg-black/30 text-[#8de47f]'
-                      : 'bg-[#eef5eb] text-[#176527]'
+                      ? 'bg-black/30 text-[var(--cp-accent-soft)]'
+                      : 'bg-[var(--cp-primary-tint)] text-[var(--cp-primary)]'
                   }`}
                 >
                   <UserRound size={25} />
@@ -492,7 +501,7 @@ function BarberStep({
                 <h3 className="truncate text-base font-semibold">{barber.displayName}</h3>
                 <div
                   className={`mt-1 flex items-center gap-1 text-xs ${
-                    selectedId === barber.id ? 'text-[#b7f0ae]' : 'text-[#5f6b62]'
+                    selectedId === barber.id ? 'text-[var(--cp-accent-soft)]' : 'text-[var(--cp-text-muted)]'
                   }`}
                 >
                   <Star size={13} className="fill-current" />
@@ -504,7 +513,7 @@ function BarberStep({
             {barber.bio ? (
               <p
                 className={`mt-3 line-clamp-2 text-sm leading-5 ${
-                  selectedId === barber.id ? 'text-white/72' : 'text-[#647067]'
+                  selectedId === barber.id ? 'text-white/72' : 'text-[var(--cp-text-muted)]'
                 }`}
               >
                 {barber.bio}
@@ -572,7 +581,7 @@ function CustomerStep({
           label={copy.customerName}
           required
           value={form.customerName}
-          className="h-12 rounded-[16px] border-[#dfe7dc] bg-[#fbfdf9]"
+          className="h-12 rounded-[16px] border-[var(--cp-border)] bg-[var(--cp-surface-soft)]"
           onChange={(e) => onChange({ ...form, customerName: e.currentTarget.value })}
         />
         <Field
@@ -580,20 +589,20 @@ function CustomerStep({
           required
           value={form.customerPhone}
           helper={copy.customerPhoneHelp}
-          className="h-12 rounded-[16px] border-[#dfe7dc] bg-[#fbfdf9]"
+          className="h-12 rounded-[16px] border-[var(--cp-border)] bg-[var(--cp-surface-soft)]"
           onChange={(e) => onChange({ ...form, customerPhone: e.currentTarget.value })}
         />
         <Field
           label={copy.customerEmail}
           type="email"
           value={form.customerEmail}
-          className="h-12 rounded-[16px] border-[#dfe7dc] bg-[#fbfdf9]"
+          className="h-12 rounded-[16px] border-[var(--cp-border)] bg-[var(--cp-surface-soft)]"
           onChange={(e) => onChange({ ...form, customerEmail: e.currentTarget.value })}
         />
         <Field
           label={copy.notes}
           value={form.notes}
-          className="h-12 rounded-[16px] border-[#dfe7dc] bg-[#fbfdf9]"
+          className="h-12 rounded-[16px] border-[var(--cp-border)] bg-[var(--cp-surface-soft)]"
           onChange={(e) => onChange({ ...form, notes: e.currentTarget.value })}
         />
       </div>
@@ -615,25 +624,25 @@ function BookingSummary({
   isSubmitting: boolean;
 }) {
   return (
-    <div className="mt-7 rounded-[24px] border border-[#dfe7dc] bg-white/95 p-3 shadow-[0_16px_45px_rgb(20_42_25_/_0.16)] backdrop-blur lg:sticky lg:bottom-3">
-      <div className="mb-3 grid gap-1 rounded-[18px] bg-[#fbfdf9] px-4 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+    <div className="mt-7 rounded-[24px] border border-[var(--cp-border)] bg-white/95 p-3 shadow-[0_16px_45px_rgb(20_42_25_/_0.16)] backdrop-blur lg:sticky lg:bottom-3">
+      <div className="mb-3 grid gap-1 rounded-[18px] bg-[var(--cp-surface-soft)] px-4 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-[#101713]">
+          <p className="truncate font-semibold text-[var(--cp-text)]">
             {service?.name ?? t.publicBooking.pickService}
           </p>
-          <p className="mt-1 truncate text-xs text-[#647067]">
+          <p className="mt-1 truncate text-xs text-[var(--cp-text-muted)]">
             {slot ? formatDateTime(slot.startsAt) : t.publicBooking.pickSlot}
             {barber ? ` | ${barber.displayName}` : ''}
           </p>
         </div>
-        <p className="text-sm font-semibold text-[#101713]">
+        <p className="text-sm font-semibold text-[var(--cp-text)]">
           {service ? formatBRL(service.priceCents) : '--'}
         </p>
       </div>
       <button
         type="submit"
         disabled={!canSubmit || isSubmitting}
-        className="flex h-14 w-full items-center justify-center rounded-[20px] bg-[#68c65b] px-5 text-sm font-semibold text-[#07130a] shadow-[0_16px_30px_rgb(45_130_55_/_0.25)] transition hover:bg-[#77d76b] disabled:cursor-not-allowed disabled:opacity-55"
+        className="flex h-14 w-full items-center justify-center rounded-[20px] bg-[var(--cp-accent)] px-5 text-sm font-semibold text-[var(--cp-accent-on)] shadow-[0_16px_30px_rgb(45_130_55_/_0.25)] transition hover:bg-[var(--cp-accent-hover)] disabled:cursor-not-allowed disabled:opacity-55"
       >
         {isSubmitting ? (
           <>
@@ -652,12 +661,12 @@ function StepHeading({ step, title, subtitle }: { step: string; title: string; s
   return (
     <div className="flex items-center justify-between gap-4">
       <div>
-        <p className="text-xs font-semibold text-[#176527]">{step}</p>
-        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#101713]">{title}</h2>
-        <p className="mt-1 text-sm text-[#647067]">{subtitle}</p>
+        <p className="text-xs font-semibold text-[var(--cp-primary)]">{step}</p>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--cp-text)]">{title}</h2>
+        <p className="mt-1 text-sm text-[var(--cp-text-muted)]">{subtitle}</p>
       </div>
-      <div className="h-2 w-24 overflow-hidden rounded-full bg-[#e4ebe1]">
-        <div className="h-full w-1/2 rounded-full bg-[#176527]" />
+      <div className="h-2 w-24 overflow-hidden rounded-full bg-[var(--cp-border)]">
+        <div className="h-full w-1/2 rounded-full bg-[var(--cp-primary)]" />
       </div>
     </div>
   );
@@ -698,8 +707,8 @@ function DateStrip({
           onClick={() => onSelect(date.iso)}
           className={`grid min-w-[72px] justify-items-center rounded-[18px] border px-3 py-3 text-sm transition ${
             selectedDate === date.iso
-              ? 'border-[#176527] bg-[#176527] text-white shadow-[0_12px_24px_rgb(23_101_39_/_0.2)]'
-              : 'border-[#e4ebe1] bg-white text-[#647067] hover:border-[#a8d5a1]'
+              ? 'border-[var(--cp-primary)] bg-[var(--cp-primary)] text-white shadow-[0_12px_24px_rgb(23_101_39_/_0.2)]'
+              : 'border-[var(--cp-border)] bg-white text-[var(--cp-text-muted)] hover:border-[var(--cp-primary-soft)]'
           }`}
         >
           <span className="text-xs capitalize opacity-75">{date.weekday}</span>
@@ -736,8 +745,8 @@ function SlotGrid({
           onClick={() => onSelect(slot.startsAt)}
           className={`h-12 rounded-[16px] border text-sm font-semibold transition ${
             selected === slot.startsAt
-              ? 'border-[#06251c] bg-[#06251c] text-white shadow-[0_12px_26px_rgb(6_37_28_/_0.22)]'
-              : 'border-[#e4ebe1] bg-white text-[#101713] hover:border-[#a8d5a1]'
+              ? 'border-[var(--cp-surface-dark-hi)] bg-[var(--cp-surface-dark-hi)] text-white shadow-[0_12px_26px_rgb(6_37_28_/_0.22)]'
+              : 'border-[var(--cp-border)] bg-white text-[var(--cp-text)] hover:border-[var(--cp-primary-soft)]'
           }`}
         >
           {formatTime(slot.startsAt)}
@@ -749,7 +758,7 @@ function SlotGrid({
 
 function InlineLoading() {
   return (
-    <div className="mt-3 flex items-center gap-2 rounded-[18px] border border-[#e4ebe1] bg-[#fbfdf9] px-4 py-3 text-sm text-[#647067]">
+    <div className="mt-3 flex items-center gap-2 rounded-[18px] border border-[var(--cp-border)] bg-[var(--cp-surface-soft)] px-4 py-3 text-sm text-[var(--cp-text-muted)]">
       <Loader2 className="animate-spin" size={16} />
       {t.common.loading}
     </div>
@@ -758,7 +767,7 @@ function InlineLoading() {
 
 function EmptyNotice({ label }: { label: string }) {
   return (
-    <p className="mt-3 rounded-[18px] border border-dashed border-[#d9e4d6] bg-[#fbfdf9] px-4 py-4 text-sm text-[#647067]">
+    <p className="mt-3 rounded-[18px] border border-dashed border-[var(--cp-border)] bg-[var(--cp-surface-soft)] px-4 py-4 text-sm text-[var(--cp-text-muted)]">
       {label}
     </p>
   );

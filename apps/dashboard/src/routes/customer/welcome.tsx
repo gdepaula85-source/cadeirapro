@@ -1,4 +1,4 @@
-// Customer welcome screen at /[slug]/welcome — the entry point for a shop's
+﻿// Customer welcome screen at /[slug]/welcome â€” the entry point for a shop's
 // white-label customer app. Mirrors the visual language of the owner welcome
 // at /welcome (dark green canvas, brand mark, green CTA) but with copy aimed
 // at customers and CTAs that route into the per-shop signup/login.
@@ -9,6 +9,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
+import { PublicThemeApplier } from '../../components/PublicThemeApplier';
 
 export function CustomerWelcomePage() {
   const { slug = '' } = useParams<{ slug: string }>();
@@ -21,10 +22,13 @@ export function CustomerWelcomePage() {
   });
 
   const shopName = orgQuery.data?.name ?? '';
+  const themeId = orgQuery.data?.themeId ?? null;
   const notFound = orgQuery.error instanceof ApiError && orgQuery.error.status === 404;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#021b15] text-white">
+    <>
+    <PublicThemeApplier themeId={themeId} />
+    <main className="relative min-h-screen overflow-hidden bg-[var(--cp-surface-dark)] text-white">
       <BackgroundDecor />
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-md flex-col px-6 py-10">
@@ -46,10 +50,10 @@ export function CustomerWelcomePage() {
               <h1 className="mt-12 text-3xl font-semibold leading-tight tracking-tight text-white">
                 Seu estilo.
                 <br />
-                <span className="text-[#8de47f]">Sua cadeira.</span>
+                <span className="text-[var(--cp-accent-soft)]">Sua cadeira.</span>
               </h1>
               <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/72">
-                Encontre os melhores barbeiros, agende seu horário e cuide do seu estilo com
+                Encontre os melhores barbeiros, agende seu horÃ¡rio e cuide do seu estilo com
                 praticidade.
               </p>
               {shopName ? (
@@ -58,11 +62,11 @@ export function CustomerWelcomePage() {
             </>
           )}
 
-          {/* Carousel pagination dots are placeholder — only screen 1 of the
+          {/* Carousel pagination dots are placeholder â€” only screen 1 of the
               3-screen onboarding is designed. Restore proper navigation when
               screens 2 and 3 land. */}
           <div className="mt-10 flex items-center gap-2" aria-hidden>
-            <span className="h-1.5 w-6 rounded-full bg-[#8de47f]" />
+            <span className="h-1.5 w-6 rounded-full bg-[var(--cp-accent-soft)]" />
             <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
             <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
           </div>
@@ -72,12 +76,12 @@ export function CustomerWelcomePage() {
           <footer className="mt-8 space-y-4 pb-2">
             <Link
               to={`/${slug}/signup`}
-              className="block w-full rounded-2xl bg-[#8de47f] py-4 text-center text-base font-semibold text-[#021b15] shadow-[0_18px_40px_rgb(141_228_127_/_0.28)] transition hover:bg-[#79d569] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8de47f]"
+              className="block w-full rounded-2xl bg-[var(--cp-accent-soft)] py-4 text-center text-base font-semibold text-[var(--cp-surface-dark)] shadow-[0_18px_40px_rgb(141_228_127_/_0.28)] transition hover:bg-[var(--cp-accent-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--cp-accent-soft)]"
             >
-              Começar
+              ComeÃ§ar
             </Link>
             <p className="text-center text-sm text-white/82">
-              Já tem uma conta?{' '}
+              JÃ¡ tem uma conta?{' '}
               <Link
                 to={`/${slug}/login`}
                 className="font-semibold text-white underline-offset-4 hover:underline"
@@ -89,6 +93,7 @@ export function CustomerWelcomePage() {
         ) : null}
       </div>
     </main>
+    </>
   );
 }
 
@@ -96,10 +101,10 @@ function NotFoundState() {
   return (
     <div className="mt-12 max-w-sm">
       <h1 className="text-2xl font-semibold leading-tight tracking-tight text-white">
-        Barbearia não encontrada
+        Barbearia nÃ£o encontrada
       </h1>
       <p className="mt-3 text-sm leading-relaxed text-white/72">
-        Confira o link compartilhado pela barbearia ou volte para a página inicial.
+        Confira o link compartilhado pela barbearia ou volte para a pÃ¡gina inicial.
       </p>
     </div>
   );
@@ -112,11 +117,11 @@ function BrandMark() {
         <path
           d="M 154 64 A 64 64 0 1 0 154 136"
           fill="none"
-          stroke="#8de47f"
+          stroke="var(--cp-accent-soft)"
           strokeWidth="14"
           strokeLinecap="round"
         />
-        <path d="M 138 52 Q 168 40 178 72 Q 152 70 138 52 Z" fill="#8de47f" />
+        <path d="M 138 52 Q 168 40 178 72 Q 152 70 138 52 Z" fill="var(--cp-accent-soft)" />
       </svg>
     </div>
   );
