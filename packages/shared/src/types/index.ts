@@ -84,3 +84,47 @@ export interface DashboardKpis {
   noShowRate: number | null;
   activeClients90d: number;
 }
+
+// ----------------------------------------------------------------------------
+// Customer-side types (per migration 0004 — per-shop white-label customer app)
+// ----------------------------------------------------------------------------
+
+export interface CustomerProfile {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  createdAt: string;
+}
+
+export interface CustomerOrganization {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  themeId: string;
+  themeConfig: Record<string, unknown>;
+  timezone: string;
+  whatsappPhone: string | null;
+}
+
+/** Response shape of GET /v1/customer/me. */
+export interface CustomerMe {
+  customer: CustomerProfile;
+  organization: CustomerOrganization;
+}
+
+/** Body shape of POST /v1/public/orgs/:slug/customer/sign-up. */
+export interface CustomerSignUpInput {
+  name: string;
+  phone: string;
+  email: string;
+  password: string;
+}
+
+/** Response shape of the same endpoint. */
+export interface CustomerSignUpResponse {
+  userId: string;
+  organizationId: string;
+  slug: string;
+}

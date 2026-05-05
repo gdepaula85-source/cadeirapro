@@ -14,6 +14,9 @@ import type {
   CreateScheduleBlockInput,
   CreateServiceInput,
   CreateStaffInput,
+  CustomerMe,
+  CustomerSignUpInput,
+  CustomerSignUpResponse,
   DashboardKpis,
   Me,
   Organization,
@@ -185,6 +188,18 @@ export const api = {
   },
   dashboard: {
     kpis: () => request<DashboardKpis>('GET', '/v1/dashboard/kpis'),
+  },
+  customer: {
+    /** Public — no auth header. Creates the auth user and links to clients. */
+    signUp: (slug: string, input: CustomerSignUpInput) =>
+      request<CustomerSignUpResponse>(
+        'POST',
+        `/v1/public/orgs/${encodeURIComponent(slug)}/customer/sign-up`,
+        input,
+        { idempotent: true, auth: false },
+      ),
+    /** Auth-gated — Authorization header carries the customer's JWT. */
+    me: () => request<CustomerMe>('GET', '/v1/customer/me'),
   },
   public: {
     org: (slug: string) =>

@@ -11,6 +11,19 @@ export interface AuthUser {
   accessToken: string;
 }
 
+/**
+ * Authenticated customer (per migration 0004). The JWT carries `role='customer'`
+ * but no `organization_id` claim — the middleware looks up the linked
+ * `clients` row server-side and attaches the resolved IDs here.
+ */
+export interface AuthCustomer {
+  authUserId: string;
+  email: string;
+  clientId: string;
+  organizationId: string;
+  accessToken: string;
+}
+
 export interface AppEnv {
   Bindings: Env;
   Variables: {
@@ -18,5 +31,6 @@ export interface AppEnv {
     logger: Logger;
     config: Config;
     user?: AuthUser;
+    customer?: AuthCustomer;
   };
 }

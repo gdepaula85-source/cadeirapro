@@ -81,4 +81,9 @@ export type {
   HoursWindow,
   ThemeConfig,
   DashboardKpis,
+  CustomerProfile,
+  CustomerOrganization,
+  CustomerMe,
+  CustomerSignUpInput,
+  CustomerSignUpResponse,
 } from './types';

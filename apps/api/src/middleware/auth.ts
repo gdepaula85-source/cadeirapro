@@ -11,15 +11,15 @@
 // existed will lack organization_id; we surface that as 401 with a specific
 // detail so the client can refresh-and-retry.
 import type { MiddlewareHandler } from 'hono';
-import type { AppEnv, AuthUser } from '../app-env';
+import type { AppEnv, AuthUser, AuthCustomer } from '../app-env';
 import { Unauthorized, Forbidden } from '../lib/errors';
-import { supabaseAnon } from '../lib/supabase';
+import { supabaseAnon, supabaseAdmin } from '../lib/supabase';
 
 interface JwtPayload {
   sub?: string;
   email?: string;
   organization_id?: string;
-  role?: 'owner' | 'barber' | 'staff';
+  role?: 'owner' | 'barber' | 'staff' | 'customer';
   exp?: number;
 }
 
@@ -63,11 +63,16 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
     });
   }
 
+  // requireAuth is for owner/staff/barber. Customer JWTs (role='customer')
+  // would have failed the organization_id check above, so payload.role here
+  // should never be 'customer' — the filter is belt-and-braces.
+  const ownerRole =
+    payload.role && payload.role !== 'customer' ? payload.role : null;
   const user: AuthUser = {
     id: data.user.id,
     email: data.user.email ?? '',
     organizationId: payload.organization_id,
-    role: payload.role ?? null,
+    role: ownerRole,
     accessToken: token,
   };
   c.set('user', user);
@@ -87,3 +92,54 @@ export function requireRole(
     await next();
   };
 }
+
+/**
+ * Customer-side auth — gates /v1/customer/* endpoints. Per migration 0004,
+ * customer JWTs carry role='customer' but no organization_id. We look up
+ * the linked clients row server-side to resolve the org and client id.
+ */
+export const requireCustomerAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
+  const header = c.req.header('authorization');
+  if (!header || !header.toLowerCase().startsWith('bearer ')) {
+    throw new Unauthorized('unauthorized');
+  }
+  const token = header.slice(7).trim();
+  if (!token) throw new Unauthorized('unauthorized');
+
+  const config = c.get('config');
+  const { data: authData, error: authErr } = await supabaseAnon(config).auth.getUser(token);
+  if (authErr || !authData.user) throw new Unauthorized('unauthorized');
+
+  const payload = decodeJwtPayload(token);
+  if (payload.role !== 'customer') {
+    throw new Forbidden('not_a_customer', { hint: 'this endpoint is for customer accounts only' });
+  }
+
+  // Resolve the clients row. service_role used here because clients RLS
+  // requires either current_org_id() (which customers don't have) or the
+  // self-policy (which we'd add in a follow-up RLS lockdown commit).
+  const admin = supabaseAdmin(config);
+  const { data, error } = await admin
+    .from('clients')
+    .select('id, organization_id')
+    .eq('auth_user_id', authData.user.id)
+    .maybeSingle();
+  if (error) throw new Error(`customer_lookup_failed: ${error.message}`);
+  if (!data) {
+    // The hook gave them a customer claim but the clients row vanished —
+    // this can only happen if a shop owner deleted the clients row after
+    // the user signed up. Treat as session-invalid.
+    throw new Unauthorized('customer_unlinked', { hint: 'sign in again to relink' });
+  }
+
+  const customer: AuthCustomer = {
+    authUserId: authData.user.id,
+    email: authData.user.email ?? '',
+    clientId: data.id as string,
+    organizationId: data.organization_id as string,
+    accessToken: token,
+  };
+  c.set('customer', customer);
+
+  await next();
+};

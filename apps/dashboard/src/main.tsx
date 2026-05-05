@@ -26,6 +26,16 @@ const SignUpStep1Page = lazyNamed(() => import('./routes/signup/index'), 'SignUp
 const SignUpStep2Page = lazyNamed(() => import('./routes/signup/shop'), 'SignUpStep2Page');
 const StaffPage = lazyNamed(() => import('./routes/staff'), 'StaffPage');
 const WelcomePage = lazyNamed(() => import('./routes/welcome'), 'WelcomePage');
+const CustomerWelcomePage = lazyNamed(
+  () => import('./routes/customer/welcome'),
+  'CustomerWelcomePage',
+);
+const CustomerLoginPage = lazyNamed(() => import('./routes/customer/login'), 'CustomerLoginPage');
+const CustomerSignUpPage = lazyNamed(
+  () => import('./routes/customer/signup'),
+  'CustomerSignUpPage',
+);
+const CustomerHomePage = lazyNamed(() => import('./routes/customer/home'), 'CustomerHomePage');
 
 function lazyNamed<T extends Record<string, ComponentType>>(
   loader: () => Promise<T>,
@@ -57,6 +67,16 @@ const router = createBrowserRouter([
   { path: '/signup/shop', element: routeElement(SignUpStep2Page) },
   { path: '/signup/done', element: routeElement(SignUpDonePage) },
   { path: '/book/:slug', element: routeElement(PublicBookingPage) },
+
+  // Customer-side per-shop app. Slug routes come AFTER the static routes
+  // above so React Router picks the literal matches (/welcome, /login,
+  // /signup, /book) first. A shop with slug='welcome' would collide here —
+  // signup-time slug validation should already exclude reserved words.
+  { path: '/:slug/welcome', element: routeElement(CustomerWelcomePage) },
+  { path: '/:slug/login', element: routeElement(CustomerLoginPage) },
+  { path: '/:slug/signup', element: routeElement(CustomerSignUpPage) },
+  { path: '/:slug', element: routeElement(CustomerHomePage) },
+
   {
     path: '/',
     element: <DashboardLayout />,

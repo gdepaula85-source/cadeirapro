@@ -28,6 +28,16 @@ const PublicAvailabilityQuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
 });
 
+const CustomerSignUpInputSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+[1-9]\d{1,14}$/, 'phone must be E.164'),
+  email: z.string().trim().email().max(120),
+  password: z.string().min(10).max(128),
+});
+
 const PublicBookingInputSchema = z.object({
   serviceId: z.string().uuid(),
   barberId: z.string().uuid(),
@@ -210,6 +220,112 @@ publicRouter.post(
           startsAt: data.starts_at as string,
           endsAt: data.ends_at as string,
           status: data.status as string,
+        },
+      },
+      201,
+    );
+  },
+);
+
+publicRouter.post(
+  '/v1/public/orgs/:slug/customer/sign-up',
+  validate('param', SlugParamSchema),
+  validate('json', CustomerSignUpInputSchema),
+  async (c) => {
+    const { slug } = c.req.valid('param');
+    const input = c.req.valid('json');
+    const config = c.get('config');
+    const admin = supabaseAdmin(config);
+
+    const orgRes = await admin
+      .from('organizations')
+      .select('id, name, slug')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (orgRes.error) throw new Error(`customer_signup_org_lookup_failed: ${orgRes.error.message}`);
+    if (!orgRes.data) throw new NotFound('public_org_not_found');
+    const orgId = orgRes.data.id as string;
+
+    // Pre-flight: if a clients row in this org already has the same phone
+    // AND it's already linked to a different auth user, fail before
+    // creating an auth user we'd just have to roll back.
+    const existingRes = await admin
+      .from('clients')
+      .select('id, auth_user_id')
+      .eq('organization_id', orgId)
+      .eq('phone', input.phone)
+      .maybeSingle();
+    if (existingRes.error)
+      throw new Error(`customer_signup_clients_lookup_failed: ${existingRes.error.message}`);
+    if (existingRes.data?.auth_user_id) {
+      throw new Conflict('phone_already_linked', {
+        hint: 'this phone is linked to an existing account at this shop — sign in instead',
+      });
+    }
+
+    // Create the Supabase auth user. email_confirm: true skips the email
+    // verification flow for the MVP — customers can log in immediately.
+    // S4 follow-up: flip to email_confirm: false once the email template
+    // and "Confirme seu e-mail" page are wired.
+    const userRes = await admin.auth.admin.createUser({
+      email: input.email,
+      password: input.password,
+      email_confirm: true,
+    });
+    if (userRes.error) {
+      const msg = userRes.error.message ?? '';
+      if (/already registered/i.test(msg) || /already exists/i.test(msg)) {
+        throw new Conflict('email_in_use');
+      }
+      throw new Error(`customer_signup_auth_create_failed: ${msg}`);
+    }
+    const authUserId = userRes.data.user!.id;
+
+    try {
+      if (existingRes.data) {
+        // Link the existing (anonymous) clients row. Booking history merges
+        // automatically via the existing client_id FK on bookings.
+        const linkRes = await admin
+          .from('clients')
+          .update({
+            auth_user_id: authUserId,
+            name: input.name,
+            email: input.email,
+            lgpd_consent_at: new Date().toISOString(),
+          })
+          .eq('id', existingRes.data.id);
+        if (linkRes.error) throw new Error(`customer_signup_link_failed: ${linkRes.error.message}`);
+      } else {
+        const createRes = await admin.from('clients').insert({
+          organization_id: orgId,
+          phone: input.phone,
+          name: input.name,
+          email: input.email,
+          auth_user_id: authUserId,
+          lgpd_consent_at: new Date().toISOString(),
+        });
+        if (createRes.error)
+          throw new Error(`customer_signup_create_failed: ${createRes.error.message}`);
+      }
+    } catch (err) {
+      // Roll back the auth user so the customer can retry. Best-effort —
+      // log if the rollback itself fails so we can clean up manually.
+      const cleanup = await admin.auth.admin.deleteUser(authUserId);
+      if (cleanup.error) {
+        c.get('logger').warn('customer_signup_rollback_failed', {
+          authUserId,
+          error: cleanup.error.message,
+        });
+      }
+      throw err;
+    }
+
+    return c.json(
+      {
+        data: {
+          userId: authUserId,
+          organizationId: orgId,
+          slug: orgRes.data.slug as string,
         },
       },
       201,
