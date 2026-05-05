@@ -11,16 +11,20 @@ import type {
   Client,
   CreateBookingInput,
   CreateClientInput,
+  CreateScheduleBlockInput,
   CreateServiceInput,
   CreateStaffInput,
   Me,
   Organization,
+  ScheduleBlock,
+  ScheduleBlockListQuery,
   Service,
   SignUpInput,
   Staff,
   UpdateBookingInput,
   UpdateClientInput,
   UpdateOrganizationInput,
+  UpdateScheduleBlockInput,
   UpdateServiceInput,
   UpdateStaffInput,
 } from '@cadeirapro/shared';
@@ -154,6 +158,23 @@ export const api = {
       params.set('date', query.date);
       return request<AvailabilitySlot[]>('GET', `/v1/availability?${params.toString()}`);
     },
+  },
+  scheduleBlocks: {
+    list: (query: ScheduleBlockListQuery) => {
+      const params = new URLSearchParams();
+      params.set('from', query.from);
+      params.set('to', query.to);
+      if (query.barberId) params.set('barberId', query.barberId);
+      return request<ScheduleBlock[]>('GET', `/v1/schedule-blocks?${params.toString()}`);
+    },
+    create: (input: CreateScheduleBlockInput) =>
+      request<ScheduleBlock>('POST', '/v1/schedule-blocks', input, { idempotent: true }),
+    update: (id: string, input: UpdateScheduleBlockInput) =>
+      request<ScheduleBlock>('PATCH', `/v1/schedule-blocks/${id}`, input, { idempotent: true }),
+    remove: (id: string) =>
+      request<ScheduleBlock>('DELETE', `/v1/schedule-blocks/${id}`, undefined, {
+        idempotent: true,
+      }),
   },
   organization: {
     update: (input: UpdateOrganizationInput) =>

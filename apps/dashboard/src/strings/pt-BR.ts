@@ -216,6 +216,29 @@ export const t = {
       pickClient: 'Selecione um cliente',
       pickSlot: 'Escolha um horário',
     },
+    blocks: {
+      title: 'Bloqueios de agenda',
+      newBlock: 'Novo bloqueio',
+      submit: 'Salvar bloqueio',
+      scope: 'Aplicar para',
+      shopWide: 'Toda a barbearia',
+      startsAt: 'Início',
+      endsAt: 'Fim',
+      reason: 'Motivo',
+      remove: 'Remover bloqueio',
+      removeConfirm: 'Remover este bloqueio da agenda?',
+      empty: 'Nenhum bloqueio para este dia.',
+      countLabel: 'bloqueios',
+      errors: {
+        generic: 'Não foi possível salvar o bloqueio.',
+        remove: 'Não foi possível remover o bloqueio.',
+        range: 'O fim precisa ser depois do início.',
+      },
+    },
+    actions: {
+      complete: 'Marcar como concluído',
+      noShow: 'Marcar no-show',
+    },
     status: {
       pending: 'Pendente',
       confirmed: 'Confirmado',
@@ -227,6 +250,7 @@ export const t = {
       overlap: 'Conflito de horário com outro agendamento.',
       generic: 'Não foi possível salvar o agendamento.',
       cancel: 'Não foi possível cancelar o agendamento.',
+      status: 'Não foi possível atualizar o status.',
     },
   },
   payments: {

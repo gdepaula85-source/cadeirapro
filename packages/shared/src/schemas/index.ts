@@ -33,6 +33,12 @@ export {
   AvailabilitySlotSchema,
 } from './booking';
 export {
+  ScheduleBlockSchema,
+  CreateScheduleBlockInputSchema,
+  UpdateScheduleBlockInputSchema,
+  ScheduleBlockListQuerySchema,
+} from './schedule-block';
+export {
   UpdateOrganizationInputSchema,
   HoursMapSchema,
   HoursWindowSchema,

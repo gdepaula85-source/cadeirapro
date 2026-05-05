@@ -4,12 +4,24 @@
 // date) combination.
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import {
+  AlertCircle,
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Plus,
+  Trash2,
+  X,
+  UserX,
+} from 'lucide-react';
 import type {
   AvailabilitySlot,
   Booking,
   BookingStatus,
   Client,
+  ScheduleBlock,
   Service,
   Staff,
 } from '@cadeirapro/shared';
@@ -81,12 +93,34 @@ const emptyBookingForm: BookingFormState = {
   notes: '',
 };
 
+interface BlockFormState {
+  barberId: string;
+  startsAtLocal: string;
+  endsAtLocal: string;
+  reason: string;
+}
+
+function defaultBlockForm(ymd: string, barberId: string): BlockFormState {
+  return {
+    barberId,
+    startsAtLocal: `${ymd}T12:00`,
+    endsAtLocal: `${ymd}T13:00`,
+    reason: '',
+  };
+}
+
+function localInputToIso(value: string): string {
+  return new Date(value).toISOString();
+}
+
 export function CalendarPage() {
   const qc = useQueryClient();
   const [date, setDate] = useState<string>(ymdToday());
   const [selectedBarberId, setSelectedBarberId] = useState<string>('');
   const [bookingFormOpen, setBookingFormOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState<BookingFormState>(emptyBookingForm);
+  const [blockFormOpen, setBlockFormOpen] = useState(false);
+  const [blockForm, setBlockForm] = useState<BlockFormState>(() => defaultBlockForm(ymdToday(), ''));
   const [error, setError] = useState<string | null>(null);
 
   const staffQuery = useQuery({ queryKey: ['staff', false], queryFn: () => api.staff.list(false) });
@@ -109,6 +143,17 @@ export function CalendarPage() {
     queryKey: ['bookings', date, selectedBarberId],
     queryFn: () =>
       api.bookings.list({
+        from: range.from,
+        to: range.to,
+        ...(selectedBarberId ? { barberId: selectedBarberId } : {}),
+      }),
+    enabled: !!selectedBarberId,
+  });
+
+  const blocksQuery = useQuery({
+    queryKey: ['schedule-blocks', date, selectedBarberId],
+    queryFn: () =>
+      api.scheduleBlocks.list({
         from: range.from,
         to: range.to,
         ...(selectedBarberId ? { barberId: selectedBarberId } : {}),
@@ -174,6 +219,43 @@ export function CalendarPage() {
     onError: () => setError(t.calendar.errors.cancel),
   });
 
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'completed' | 'no_show' }) =>
+      api.bookings.update(id, { status }),
+    onSuccess: async () => qc.invalidateQueries({ queryKey: ['bookings'] }),
+    onError: () => setError(t.calendar.errors.status),
+  });
+
+  const createBlockMutation = useMutation({
+    mutationFn: () =>
+      api.scheduleBlocks.create({
+        barberId: blockForm.barberId ? blockForm.barberId : null,
+        startsAt: localInputToIso(blockForm.startsAtLocal),
+        endsAt: localInputToIso(blockForm.endsAtLocal),
+        reason: blockForm.reason || null,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['schedule-blocks'] }),
+        qc.invalidateQueries({ queryKey: ['availability'] }),
+      ]);
+      setBlockFormOpen(false);
+      setError(null);
+    },
+    onError: () => setError(t.calendar.blocks.errors.generic),
+  });
+
+  const removeBlockMutation = useMutation({
+    mutationFn: (id: string) => api.scheduleBlocks.remove(id),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['schedule-blocks'] }),
+        qc.invalidateQueries({ queryKey: ['availability'] }),
+      ]);
+    },
+    onError: () => setError(t.calendar.blocks.errors.remove),
+  });
+
   const barbers = useMemo(
     () => (staffQuery.data ?? []).filter((s) => s.role === 'barber' && s.isActive),
     [staffQuery.data],
@@ -193,10 +275,22 @@ export function CalendarPage() {
     setBookingFormOpen(true);
   }
 
+  function openNewBlock() {
+    setError(null);
+    setBlockForm(defaultBlockForm(date, selectedBarberId));
+    setBlockFormOpen(true);
+  }
+
   function onBookingSubmit(e: FormEvent) {
     e.preventDefault();
     if (!bookingForm.serviceId || !bookingForm.clientId || !bookingForm.startsAt) return;
     createMutation.mutate();
+  }
+
+  function onBlockSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!blockForm.startsAtLocal || !blockForm.endsAtLocal) return;
+    createBlockMutation.mutate();
   }
 
   return (
@@ -264,14 +358,25 @@ export function CalendarPage() {
             />
           </div>
         </div>
-        <Button
-          onClick={openNewBooking}
-          disabled={dependenciesMissing || !selectedBarberId}
-          className="gap-2"
-        >
-          <Plus size={15} />
-          {t.calendar.newBooking}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={openNewBooking}
+            disabled={dependenciesMissing || !selectedBarberId}
+            className="gap-2"
+          >
+            <Plus size={15} />
+            {t.calendar.newBooking}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={openNewBlock}
+            disabled={!selectedBarberId}
+            className="gap-2"
+          >
+            <Clock size={15} />
+            {t.calendar.blocks.newBlock}
+          </Button>
+        </div>
       </div>
 
       {dependenciesMissing ? (
@@ -284,11 +389,21 @@ export function CalendarPage() {
         <DayGrid
           bookings={bookingsForDay}
           loading={bookingsQuery.isLoading}
+          onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
           onCancel={(id) => {
             if (window.confirm(t.calendar.cancelConfirm)) cancelMutation.mutate(id);
           }}
         />
       )}
+
+      <ScheduleBlocksPanel
+        blocks={blocksQuery.data ?? []}
+        loading={blocksQuery.isLoading}
+        selectedBarberId={selectedBarberId}
+        onRemove={(id) => {
+          if (window.confirm(t.calendar.blocks.removeConfirm)) removeBlockMutation.mutate(id);
+        }}
+      />
 
       {bookingFormOpen ? (
         <BookingFormModal
@@ -304,17 +419,92 @@ export function CalendarPage() {
           slotsLoading={availabilityQuery.isLoading}
         />
       ) : null}
+      {blockFormOpen ? (
+        <ScheduleBlockModal
+          form={blockForm}
+          setForm={setBlockForm}
+          onClose={() => setBlockFormOpen(false)}
+          onSubmit={onBlockSubmit}
+          submitting={createBlockMutation.isPending}
+          barbers={barbers}
+          error={error}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function ScheduleBlocksPanel({
+  blocks,
+  loading,
+  selectedBarberId,
+  onRemove,
+}: {
+  blocks: ScheduleBlock[];
+  loading: boolean;
+  selectedBarberId: string;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
+      <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Clock size={15} />
+          {t.calendar.blocks.title}
+        </div>
+        <span className="text-xs text-[var(--color-text-muted)]">
+          {loading ? t.common.loading : `${blocks.length} ${t.calendar.blocks.countLabel}`}
+        </span>
+      </div>
+      {blocks.length === 0 ? (
+        <div className="px-4 py-5 text-sm text-[var(--color-text-muted)]">
+          {selectedBarberId ? t.calendar.blocks.empty : t.calendar.selectBarber}
+        </div>
+      ) : (
+        <div className="divide-y divide-[var(--color-border)]">
+          {blocks.map((block) => (
+            <div key={block.id} className="px-4 py-3 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-[var(--color-text)]">
+                  {new Date(block.startsAt).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  {' - '}
+                  {new Date(block.endsAt).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </div>
+                <div className="text-xs text-[var(--color-text-muted)] truncate">
+                  {block.barberId ? (block.barberName ?? t.calendar.barber) : t.calendar.blocks.shopWide}
+                  {block.reason ? ` · ${block.reason}` : ''}
+                </div>
+              </div>
+              <button
+                onClick={() => onRemove(block.id)}
+                className="shrink-0 p-1.5 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface-muted)] hover:text-[var(--color-danger)]"
+                aria-label={t.calendar.blocks.remove}
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
 function DayGrid({
   bookings,
   loading,
+  onStatusChange,
   onCancel,
 }: {
   bookings: Booking[];
   loading: boolean;
+  onStatusChange: (id: string, status: 'completed' | 'no_show') => void;
   onCancel: (id: string) => void;
 }) {
   const hours = useMemo(
@@ -366,14 +556,33 @@ function DayGrid({
                         {b.servicePriceCents != null ? ` · ${formatBRL(b.servicePriceCents)}` : ''}
                       </div>
                     </div>
-                    {b.status !== 'cancelled' && b.status !== 'completed' ? (
-                      <button
-                        onClick={() => onCancel(b.id)}
-                        className="shrink-0 -mr-1 -mt-1 p-1 rounded hover:bg-black/5"
-                        aria-label={t.calendar.cancelBooking}
-                      >
-                        <X size={12} />
-                      </button>
+                    {b.status === 'pending' || b.status === 'confirmed' ? (
+                      <div className="shrink-0 -mr-1 -mt-1 flex gap-0.5">
+                        <button
+                          onClick={() => onStatusChange(b.id, 'completed')}
+                          className="p-1 rounded hover:bg-black/5"
+                          aria-label={t.calendar.actions.complete}
+                          title={t.calendar.actions.complete}
+                        >
+                          <CheckCircle2 size={12} />
+                        </button>
+                        <button
+                          onClick={() => onStatusChange(b.id, 'no_show')}
+                          className="p-1 rounded hover:bg-black/5"
+                          aria-label={t.calendar.actions.noShow}
+                          title={t.calendar.actions.noShow}
+                        >
+                          <UserX size={12} />
+                        </button>
+                        <button
+                          onClick={() => onCancel(b.id)}
+                          className="p-1 rounded hover:bg-black/5"
+                          aria-label={t.calendar.cancelBooking}
+                          title={t.calendar.cancelBooking}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                 </article>
@@ -381,6 +590,96 @@ function DayGrid({
             })}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ScheduleBlockModal({
+  form,
+  setForm,
+  onClose,
+  onSubmit,
+  submitting,
+  barbers,
+  error,
+}: {
+  form: BlockFormState;
+  setForm: (updater: BlockFormState | ((s: BlockFormState) => BlockFormState)) => void;
+  onClose: () => void;
+  onSubmit: (e: FormEvent) => void;
+  submitting: boolean;
+  barbers: Staff[];
+  error: string | null;
+}) {
+  const invalidRange =
+    !!form.startsAtLocal &&
+    !!form.endsAtLocal &&
+    new Date(form.endsAtLocal).getTime() <= new Date(form.startsAtLocal).getTime();
+
+  return (
+    <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+      <div className="absolute inset-y-0 right-0 w-full max-w-md bg-[var(--color-surface)] border-l border-[var(--color-border)] flex flex-col shadow-lg">
+        <header className="px-5 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
+          <h2 className="text-base font-semibold">{t.calendar.blocks.newBlock}</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface-muted)]"
+            aria-label="Fechar"
+          >
+            <X size={18} />
+          </button>
+        </header>
+        <form onSubmit={onSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+          <SelectField
+            label={t.calendar.blocks.scope}
+            value={form.barberId}
+            onChange={(e) => setForm({ ...form, barberId: e.currentTarget.value })}
+            options={[
+              { value: '', label: t.calendar.blocks.shopWide },
+              ...barbers.map((b) => ({ value: b.id, label: b.displayName })),
+            ]}
+          />
+          <Field
+            label={t.calendar.blocks.startsAt}
+            type="datetime-local"
+            value={form.startsAtLocal}
+            onChange={(e) => setForm({ ...form, startsAtLocal: e.currentTarget.value })}
+          />
+          <Field
+            label={t.calendar.blocks.endsAt}
+            type="datetime-local"
+            value={form.endsAtLocal}
+            onChange={(e) => setForm({ ...form, endsAtLocal: e.currentTarget.value })}
+          />
+          <Field
+            label={t.calendar.blocks.reason}
+            value={form.reason}
+            onChange={(e) => setForm({ ...form, reason: e.currentTarget.value })}
+          />
+          {invalidRange ? (
+            <div className="flex items-start gap-2 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <span>{t.calendar.blocks.errors.range}</span>
+            </div>
+          ) : null}
+          {error ? (
+            <div className="flex items-start gap-2 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          ) : null}
+          <Button
+            type="submit"
+            loading={submitting}
+            disabled={!form.startsAtLocal || !form.endsAtLocal || invalidRange}
+            className="w-full gap-2"
+          >
+            <Clock size={15} />
+            {submitting ? t.calendar.booking.submitting : t.calendar.blocks.submit}
+          </Button>
+        </form>
       </div>
     </div>
   );
