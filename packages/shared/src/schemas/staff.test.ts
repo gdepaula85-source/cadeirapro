@@ -29,15 +29,18 @@ describe('CreateStaffInputSchema', () => {
     expect(parsed.pixKey).toBe('12345678901');
   });
 
-  it('rejects pixKey without matching pixKeyType', () => {
-    expect(() =>
-      CreateStaffInputSchema.parse({
-        email: 'b@e.com',
-        displayName: 'Pedro',
-        pixKey: 'not-a-cpf',
-        pixKeyType: 'cpf',
-      }),
-    ).toThrow(/pixKey/);
+  it('accepts pixKey without enforcing format (validation deferred — see schema header)', () => {
+    // Format validation was intentionally relaxed for owner testing. The strict
+    // validatePixKeyFormat check still exists in ../pix.ts and must be re-wired
+    // before Pix payment integration ships in S3.
+    const parsed = CreateStaffInputSchema.parse({
+      email: 'b@e.com',
+      displayName: 'Pedro',
+      pixKey: 'not-a-cpf',
+      pixKeyType: 'cpf',
+    });
+    expect(parsed.pixKey).toBe('not-a-cpf');
+    expect(parsed.pixKeyType).toBe('cpf');
   });
 
   it('rejects pixKey when pixKeyType is missing', () => {

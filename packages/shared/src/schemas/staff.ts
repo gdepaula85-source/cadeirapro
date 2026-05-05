@@ -6,7 +6,14 @@
 import { z } from 'zod';
 import { PixKeyTypeSchema } from './pix';
 import { HoursMapSchema } from './organization-update';
-import { validatePixKeyFormat } from '../pix';
+
+// NOTE: Pix key format validation is intentionally NOT enforced on staff
+// create/update right now. The strict regex check (validatePixKeyFormat
+// in ../pix.ts) is still available and used at sign-up and elsewhere; we
+// just don't gate staff operations on it because the owner is mid-testing
+// and entering placeholder data. Re-tighten BEFORE Pix payment integration
+// ships (S3+) — a staff row with a malformed Pix key cannot receive split
+// payouts, so the validation is the safety net.
 
 const E164_RE = /^\+[1-9]\d{1,14}$/;
 
@@ -72,15 +79,15 @@ export const CreateStaffInputSchema = z
     assignedServiceIds: z.array(z.string().uuid()).default([]),
     schedule: HoursMapSchema.default({}),
   })
-  // If pixKey is set, pixKeyType is required and must match the format.
+  // If pixKey is set, pixKeyType is required. Format check is currently
+  // off — see header comment.
   .refine(
     (d) => {
       if (!d.pixKey) return true;
-      if (!d.pixKeyType) return false;
-      return validatePixKeyFormat(d.pixKey, d.pixKeyType);
+      return !!d.pixKeyType;
     },
     {
-      message: 'pixKey does not match pixKeyType format (or pixKeyType is missing)',
+      message: 'pixKeyType is required when pixKey is set',
       path: ['pixKey'],
     },
   );
@@ -110,11 +117,10 @@ export const UpdateStaffInputSchema = z
   .refine(
     (d) => {
       if (d.pixKey == null) return true;
-      if (!d.pixKeyType) return false;
-      return validatePixKeyFormat(d.pixKey, d.pixKeyType);
+      return !!d.pixKeyType;
     },
     {
-      message: 'pixKey does not match pixKeyType format (or pixKeyType is missing)',
+      message: 'pixKeyType is required when pixKey is set',
       path: ['pixKey'],
     },
   );
