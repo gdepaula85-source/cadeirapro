@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
   ChevronRight,
@@ -10,13 +10,14 @@ import {
   Star,
   UserRound,
 } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import type { AvailabilitySlot } from '@cadeirapro/shared';
 import { api, ApiError, type PublicBarber, type PublicService } from '../lib/api';
 import { formatBRL } from '../lib/format';
 import { Field } from '../components/Field';
 import { PublicThemeApplier } from '../components/PublicThemeApplier';
 import { t } from '../strings/pt-BR';
+import { useAuth } from '../lib/auth';
 
 interface FormState {
   serviceId: string;
@@ -44,8 +45,11 @@ const emptyForm = (): FormState => ({
 
 export function PublicBookingPage() {
   const { slug = '' } = useParams();
+  const qc = useQueryClient();
+  const { session } = useAuth();
   const copy = t.publicBooking;
   const [form, setForm] = useState<FormState>(() => emptyForm());
+  const [prefilledCustomer, setPrefilledCustomer] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const orgQuery = useQuery({
@@ -78,6 +82,13 @@ export function PublicBookingPage() {
     enabled: Boolean(slug && form.serviceId && form.barberId && form.date),
   });
 
+  const customerQuery = useQuery({
+    queryKey: ['customer', 'me'],
+    queryFn: () => api.customer.me(),
+    enabled: Boolean(session),
+    retry: false,
+  });
+
   const bookingMutation = useMutation({
     mutationFn: () =>
       api.public.createBooking(slug, {
@@ -89,7 +100,10 @@ export function PublicBookingPage() {
         customerEmail: form.customerEmail || null,
         notes: form.notes || null,
       }),
-    onSuccess: () => setError(null),
+    onSuccess: async () => {
+      setError(null);
+      await qc.invalidateQueries({ queryKey: ['customer', 'me'] });
+    },
     onError: (err) => {
       if (err instanceof ApiError && err.code === 'booking_overlap') setError(copy.errors.overlap);
       else if (err instanceof ApiError && err.code === 'validation_failed')
@@ -113,6 +127,19 @@ export function PublicBookingPage() {
   useEffect(() => {
     setForm((current) => ({ ...current, startsAt: '' }));
   }, [form.barberId, form.date]);
+
+  useEffect(() => {
+    if (prefilledCustomer || !customerQuery.data || customerQuery.data.organization.slug !== slug) {
+      return;
+    }
+    setForm((current) => ({
+      ...current,
+      customerName: current.customerName || customerQuery.data.customer.name,
+      customerPhone: current.customerPhone || customerQuery.data.customer.phone,
+      customerEmail: current.customerEmail || customerQuery.data.customer.email || '',
+    }));
+    setPrefilledCustomer(true);
+  }, [customerQuery.data, prefilledCustomer, slug]);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -138,6 +165,16 @@ export function PublicBookingPage() {
               {copy.confirmedTitle}
             </h1>
             <p className="mt-2 text-sm leading-6 text-[var(--cp-text-muted)]">{copy.confirmedBody}</p>
+            <div className="mt-5 rounded-[20px] bg-[var(--cp-surface-soft)] px-4 py-3 text-left text-sm text-[var(--cp-text)]">
+              <p className="font-semibold">{selectedService?.name ?? copy.pickService}</p>
+              <p className="mt-1 text-[var(--cp-text-muted)]">
+                {selectedSlot ? formatDateTime(selectedSlot.startsAt) : ''}
+                {selectedBarber ? ` | ${selectedBarber.displayName}` : ''}
+              </p>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                Aguardando confirmacao da barbearia
+              </p>
+            </div>
             <button
               type="button"
               className="mt-7 h-13 w-full rounded-[18px] bg-[var(--cp-accent)] px-5 text-sm font-semibold text-[var(--cp-accent-on)] shadow-[0_14px_30px_rgb(45_130_55_/_0.25)] transition hover:bg-[var(--cp-accent-hover)]"
@@ -148,6 +185,14 @@ export function PublicBookingPage() {
             >
               {copy.startOver}
             </button>
+            {session ? (
+              <Link
+                to={`/${slug}/profile`}
+                className="mt-3 block rounded-[18px] border border-[var(--cp-border)] px-5 py-3 text-sm font-semibold text-[var(--cp-primary)] transition hover:border-[var(--cp-primary)]"
+              >
+                Ver meus agendamentos
+              </Link>
+            ) : null}
           </div>
         </section>
         </main>
@@ -204,7 +249,11 @@ export function PublicBookingPage() {
               onSlotSelect={(startsAt) => setForm({ ...form, startsAt })}
             />
 
-            <CustomerStep form={form} onChange={setForm} />
+            <CustomerStep
+              form={form}
+              onChange={setForm}
+              isPrefilled={Boolean(customerQuery.data && customerQuery.data.organization.slug === slug)}
+            />
           </div>
 
           {error ? (
@@ -568,14 +617,21 @@ function ScheduleStep({
 function CustomerStep({
   form,
   onChange,
+  isPrefilled,
 }: {
   form: FormState;
   onChange: (form: FormState) => void;
+  isPrefilled: boolean;
 }) {
   const copy = t.publicBooking;
   return (
     <section>
       <StepHeading step="04" title={copy.customerName} subtitle={copy.customerPhoneHelp} />
+      {isPrefilled ? (
+        <p className="mt-3 rounded-[16px] bg-[var(--cp-primary-tint)] px-4 py-3 text-sm font-medium text-[var(--cp-primary)]">
+          Usando os dados da sua conta para ligar este agendamento ao seu historico.
+        </p>
+      ) : null}
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         <Field
           label={copy.customerName}

@@ -6,6 +6,7 @@ import type { Context } from 'hono';
 import { z } from 'zod';
 import type { AppEnv } from '../app-env';
 import { validate } from '../middleware/validate';
+import { idempotency } from '../middleware/idempotency';
 import { BadRequest, Conflict, NotFound } from '../lib/errors';
 import { supabaseAdmin, supabaseAnon } from '../lib/supabase';
 import {
@@ -153,6 +154,7 @@ publicRouter.get(
 
 publicRouter.post(
   '/v1/public/orgs/:slug/bookings',
+  idempotency,
   validate('param', SlugParamSchema),
   validate('json', PublicBookingInputSchema),
   async (c) => {

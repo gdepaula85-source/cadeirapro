@@ -299,7 +299,7 @@ export function CalendarPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'completed' | 'no_show' }) =>
+    mutationFn: ({ id, status }: { id: string; status: 'confirmed' | 'completed' | 'no_show' }) =>
       api.bookings.update(id, { status }),
     onSuccess: async () => qc.invalidateQueries({ queryKey: ['bookings'] }),
     onError: () => setError(t.calendar.errors.status),
@@ -347,6 +347,13 @@ export function CalendarPage() {
 
   const dependenciesMissing =
     barbers.length === 0 || activeServices.length === 0 || clientOptions.length === 0;
+  const pendingOnlineBookings = useMemo(
+    () =>
+      dayBookingsUnfiltered
+        .filter((booking) => booking.status === 'pending' && booking.source === 'widget')
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+    [dayBookingsUnfiltered],
+  );
 
   function openNewBooking() {
     setError(null);
@@ -485,6 +492,15 @@ export function CalendarPage() {
         onStatusFilterChange={setStatusFilter}
       />
 
+      <PendingOnlineBookingsPanel
+        bookings={pendingOnlineBookings}
+        onConfirm={(id) => statusMutation.mutate({ id, status: 'confirmed' })}
+        onEdit={openEditBooking}
+        onCancel={(id) => {
+          if (window.confirm(t.calendar.cancelConfirm)) cancelMutation.mutate(id);
+        }}
+      />
+
       {dependenciesMissing ? (
         <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm text-[var(--color-text-muted)] space-y-1">
           {barbers.length === 0 ? <div>• {t.calendar.noBarbers}</div> : null}
@@ -497,6 +513,7 @@ export function CalendarPage() {
           loading={bookingsQuery.isLoading}
           onEdit={openEditBooking}
           onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
+          onConfirm={(id) => statusMutation.mutate({ id, status: 'confirmed' })}
           onCancel={(id) => {
             if (window.confirm(t.calendar.cancelConfirm)) cancelMutation.mutate(id);
           }}
@@ -657,6 +674,80 @@ function CalendarSummary({
   );
 }
 
+function PendingOnlineBookingsPanel({
+  bookings,
+  onConfirm,
+  onEdit,
+  onCancel,
+}: {
+  bookings: Booking[];
+  onConfirm: (id: string) => void;
+  onEdit: (booking: Booking) => void;
+  onCancel: (id: string) => void;
+}) {
+  return (
+    <section className="rounded-lg border border-amber-200 bg-amber-50/80">
+      <div className="flex flex-col gap-2 border-b border-amber-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-amber-950">Pedidos online pendentes</h2>
+          <p className="text-xs text-amber-800">
+            Confirme ou ajuste reservas criadas pelo app publico antes do horario.
+          </p>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-900">
+          {bookings.length} pendente{bookings.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      {bookings.length === 0 ? (
+        <p className="px-4 py-4 text-sm text-amber-800">Nenhum pedido online pendente neste dia.</p>
+      ) : (
+        <div className="divide-y divide-amber-200">
+          {bookings.map((booking) => (
+            <div
+              key={booking.id}
+              className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-amber-950">
+                  {new Date(booking.startsAt).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  | {booking.clientName ?? 'Cliente'} | {booking.serviceName ?? 'Servico'}
+                </p>
+                <p className="mt-1 truncate text-xs text-amber-800">
+                  {booking.barberName ?? 'Barbeiro'} | {booking.clientPhone ?? 'Sem telefone'}
+                  {booking.servicePriceCents != null ? ` | ${formatBRL(booking.servicePriceCents)}` : ''}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => onConfirm(booking.id)} className="gap-1.5 px-3 py-1.5 text-xs">
+                  <CheckCircle2 size={14} />
+                  Confirmar
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => onEdit(booking)}
+                  className="px-3 py-1.5 text-xs"
+                >
+                  Ajustar
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => onCancel(booking.id)}
+                  className="px-3 py-1.5 text-xs text-[var(--color-danger)] hover:bg-red-50"
+                >
+                  Recusar
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
@@ -671,12 +762,14 @@ function DayGrid({
   loading,
   onEdit,
   onStatusChange,
+  onConfirm,
   onCancel,
 }: {
   bookings: Booking[];
   loading: boolean;
   onEdit: (booking: Booking) => void;
   onStatusChange: (id: string, status: 'completed' | 'no_show') => void;
+  onConfirm: (id: string) => void;
   onCancel: (id: string) => void;
 }) {
   const hours = useMemo(
@@ -738,14 +831,25 @@ function DayGrid({
                         >
                           <Pencil size={12} />
                         </button>
-                        <button
-                          onClick={() => onStatusChange(b.id, 'completed')}
-                          className="p-1 rounded hover:bg-black/5"
-                          aria-label={t.calendar.actions.complete}
-                          title={t.calendar.actions.complete}
-                        >
-                          <CheckCircle2 size={12} />
-                        </button>
+                        {b.status === 'pending' ? (
+                          <button
+                            onClick={() => onConfirm(b.id)}
+                            className="p-1 rounded hover:bg-black/5"
+                            aria-label="Confirmar agendamento"
+                            title="Confirmar agendamento"
+                          >
+                            <CheckCircle2 size={12} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onStatusChange(b.id, 'completed')}
+                            className="p-1 rounded hover:bg-black/5"
+                            aria-label={t.calendar.actions.complete}
+                            title={t.calendar.actions.complete}
+                          >
+                            <CheckCircle2 size={12} />
+                          </button>
+                        )}
                         <button
                           onClick={() => onStatusChange(b.id, 'no_show')}
                           className="p-1 rounded hover:bg-black/5"

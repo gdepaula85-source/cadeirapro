@@ -250,7 +250,7 @@ export const api = {
         'POST',
         `/v1/public/orgs/${encodeURIComponent(slug)}/bookings`,
         input,
-        { auth: false },
+        { auth: false, idempotent: true },
       ),
   },
 };

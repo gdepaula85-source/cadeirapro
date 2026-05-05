@@ -87,6 +87,24 @@ export function CustomerHomePage() {
           </Link>
         </section>
 
+        {me?.upcomingBookings[0] ? (
+          <section className="mt-6 rounded-[28px] border border-[var(--cp-border)] bg-white p-5 shadow-[0_14px_36px_rgb(25_38_28_/_0.06)]">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--cp-primary)]">
+              Proximo agendamento
+            </p>
+            <h2 className="mt-2 text-lg font-semibold text-[var(--cp-text)]">
+              {me.upcomingBookings[0].serviceName ?? 'Servico'}
+            </h2>
+            <p className="mt-1 text-sm text-[var(--cp-text-muted)]">
+              {formatDateTime(me.upcomingBookings[0].startsAt)}
+              {me.upcomingBookings[0].barberName ? ` | ${me.upcomingBookings[0].barberName}` : ''}
+            </p>
+            <span className="mt-4 inline-flex rounded-full bg-[var(--cp-primary-tint)] px-3 py-1 text-xs font-semibold text-[var(--cp-primary)]">
+              {statusLabel(me.upcomingBookings[0].status)}
+            </span>
+          </section>
+        ) : null}
+
         <section className="mt-6 rounded-[28px] border border-[var(--cp-border)] bg-white p-5 shadow-[0_14px_36px_rgb(25_38_28_/_0.06)]">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--cp-primary-tint)] text-[var(--cp-primary)]">
@@ -108,6 +126,25 @@ export function CustomerHomePage() {
     </main>
     </>
   );
+}
+
+function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+}
+
+function statusLabel(status: string): string {
+  if (status === 'pending') return 'Aguardando confirmacao';
+  if (status === 'confirmed') return 'Confirmado';
+  if (status === 'completed') return 'Concluido';
+  if (status === 'cancelled') return 'Cancelado';
+  if (status === 'no_show') return 'Nao compareceu';
+  return status;
 }
 
 function firstName(fullName: string): string {
