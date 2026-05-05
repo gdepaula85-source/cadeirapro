@@ -168,7 +168,10 @@ export function DashboardLayout() {
       </div>
     );
   }
-  if (!session) return <Navigate to="/login" replace />;
+  // Fresh visitors land on the marketing/welcome page; the login page is one
+  // tap away ("Sou barbeiro" link) for returning owners. /login still works
+  // directly for anyone with a bookmark or following an email link.
+  if (!session) return <Navigate to="/welcome" replace />;
 
   const shopName = meQuery.data?.organization.name ?? '';
   const timezone = meQuery.data?.organization.timezone ?? '';

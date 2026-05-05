@@ -25,6 +25,7 @@ const SignUpDonePage = lazyNamed(() => import('./routes/signup/done'), 'SignUpDo
 const SignUpStep1Page = lazyNamed(() => import('./routes/signup/index'), 'SignUpStep1Page');
 const SignUpStep2Page = lazyNamed(() => import('./routes/signup/shop'), 'SignUpStep2Page');
 const StaffPage = lazyNamed(() => import('./routes/staff'), 'StaffPage');
+const WelcomePage = lazyNamed(() => import('./routes/welcome'), 'WelcomePage');
 
 function lazyNamed<T extends Record<string, ComponentType>>(
   loader: () => Promise<T>,
@@ -48,6 +49,7 @@ function routeElement(Page: ComponentType) {
 }
 
 const router = createBrowserRouter([
+  { path: '/welcome', element: routeElement(WelcomePage) },
   { path: '/login', element: routeElement(LoginPage) },
   { path: '/forgot-password', element: routeElement(ForgotPasswordPage) },
   { path: '/reset-password', element: routeElement(ResetPasswordPage) },
