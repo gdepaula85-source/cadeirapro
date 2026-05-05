@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  Pencil,
   Plus,
   Trash2,
   X,
@@ -80,16 +81,22 @@ const STATUS_CLASS: Record<BookingStatus, string> = {
 };
 
 interface BookingFormState {
+  id: string | null;
+  barberId: string;
   serviceId: string;
   clientId: string;
   startsAt: string; // ISO UTC
+  startsAtLocal: string;
   notes: string;
 }
 
 const emptyBookingForm: BookingFormState = {
+  id: null,
+  barberId: '',
   serviceId: '',
   clientId: '',
   startsAt: '',
+  startsAtLocal: '',
   notes: '',
 };
 
@@ -111,6 +118,16 @@ function defaultBlockForm(ymd: string, barberId: string): BlockFormState {
 
 function localInputToIso(value: string): string {
   return new Date(value).toISOString();
+}
+
+function isoToLocalInput(value: string): string {
+  const d = new Date(value);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day}T${h}:${min}`;
 }
 
 export function CalendarPage() {
@@ -177,21 +194,25 @@ export function CalendarPage() {
   }, [bookingsQuery.data, date]);
 
   const availabilityQuery = useQuery({
-    queryKey: ['availability', selectedBarberId, bookingForm.serviceId, date],
+    queryKey: ['availability', bookingForm.barberId || selectedBarberId, bookingForm.serviceId, date],
     queryFn: () =>
       api.availability.list({
-        barberId: selectedBarberId,
+        barberId: bookingForm.barberId || selectedBarberId,
         serviceId: bookingForm.serviceId,
         date,
       }),
-    enabled: bookingFormOpen && !!selectedBarberId && !!bookingForm.serviceId,
+    enabled:
+      bookingFormOpen &&
+      !bookingForm.id &&
+      !!(bookingForm.barberId || selectedBarberId) &&
+      !!bookingForm.serviceId,
   });
 
   const createMutation = useMutation({
     mutationFn: () =>
       api.bookings.create({
         clientId: bookingForm.clientId,
-        barberId: selectedBarberId,
+        barberId: bookingForm.barberId || selectedBarberId,
         serviceId: bookingForm.serviceId,
         startsAt: bookingForm.startsAt,
         status: 'confirmed',
@@ -207,6 +228,39 @@ export function CalendarPage() {
     onError: (err) => {
       if (err instanceof ApiError && err.code === 'booking_overlap') {
         setError(t.calendar.errors.overlap);
+        return;
+      }
+      setError(t.calendar.errors.generic);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () => {
+      if (!bookingForm.id) throw new Error('booking_id_missing');
+      return api.bookings.update(bookingForm.id, {
+        clientId: bookingForm.clientId,
+        barberId: bookingForm.barberId,
+        serviceId: bookingForm.serviceId,
+        startsAt: localInputToIso(bookingForm.startsAtLocal),
+        notes: bookingForm.notes || null,
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['bookings'] }),
+        qc.invalidateQueries({ queryKey: ['availability'] }),
+      ]);
+      setBookingFormOpen(false);
+      setBookingForm(emptyBookingForm);
+      setError(null);
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.code === 'booking_overlap') {
+        setError(t.calendar.errors.overlap);
+        return;
+      }
+      if (err instanceof ApiError && err.code === 'barber_not_assigned_to_service') {
+        setError(t.calendar.errors.barberService);
         return;
       }
       setError(t.calendar.errors.generic);
@@ -271,7 +325,21 @@ export function CalendarPage() {
 
   function openNewBooking() {
     setError(null);
-    setBookingForm(emptyBookingForm);
+    setBookingForm({ ...emptyBookingForm, barberId: selectedBarberId });
+    setBookingFormOpen(true);
+  }
+
+  function openEditBooking(booking: Booking) {
+    setError(null);
+    setBookingForm({
+      id: booking.id,
+      barberId: booking.barberId,
+      serviceId: booking.serviceId,
+      clientId: booking.clientId,
+      startsAt: booking.startsAt,
+      startsAtLocal: isoToLocalInput(booking.startsAt),
+      notes: booking.notes ?? '',
+    });
     setBookingFormOpen(true);
   }
 
@@ -283,7 +351,13 @@ export function CalendarPage() {
 
   function onBookingSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!bookingForm.serviceId || !bookingForm.clientId || !bookingForm.startsAt) return;
+    if (!bookingForm.serviceId || !bookingForm.clientId) return;
+    if (bookingForm.id) {
+      if (!bookingForm.barberId || !bookingForm.startsAtLocal) return;
+      updateMutation.mutate();
+      return;
+    }
+    if (!bookingForm.startsAt || !(bookingForm.barberId || selectedBarberId)) return;
     createMutation.mutate();
   }
 
@@ -389,6 +463,7 @@ export function CalendarPage() {
         <DayGrid
           bookings={bookingsForDay}
           loading={bookingsQuery.isLoading}
+          onEdit={openEditBooking}
           onStatusChange={(id, status) => statusMutation.mutate({ id, status })}
           onCancel={(id) => {
             if (window.confirm(t.calendar.cancelConfirm)) cancelMutation.mutate(id);
@@ -411,8 +486,9 @@ export function CalendarPage() {
           setForm={setBookingForm}
           onClose={() => setBookingFormOpen(false)}
           onSubmit={onBookingSubmit}
-          submitting={createMutation.isPending}
+          submitting={createMutation.isPending || updateMutation.isPending}
           error={error}
+          barbers={barbers}
           services={activeServices}
           clients={clientOptions}
           slots={availabilityQuery.data ?? []}
@@ -499,11 +575,13 @@ function ScheduleBlocksPanel({
 function DayGrid({
   bookings,
   loading,
+  onEdit,
   onStatusChange,
   onCancel,
 }: {
   bookings: Booking[];
   loading: boolean;
+  onEdit: (booking: Booking) => void;
   onStatusChange: (id: string, status: 'completed' | 'no_show') => void;
   onCancel: (id: string) => void;
 }) {
@@ -559,6 +637,14 @@ function DayGrid({
                     {b.status === 'pending' || b.status === 'confirmed' ? (
                       <div className="shrink-0 -mr-1 -mt-1 flex gap-0.5">
                         <button
+                          onClick={() => onEdit(b)}
+                          className="p-1 rounded hover:bg-black/5"
+                          aria-label={t.common.edit}
+                          title={t.common.edit}
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
                           onClick={() => onStatusChange(b.id, 'completed')}
                           className="p-1 rounded hover:bg-black/5"
                           aria-label={t.calendar.actions.complete}
@@ -583,6 +669,16 @@ function DayGrid({
                           <X size={12} />
                         </button>
                       </div>
+                    ) : null}
+                    {b.status === 'completed' || b.status === 'no_show' ? (
+                      <button
+                        onClick={() => onEdit(b)}
+                        className="shrink-0 -mr-1 -mt-1 p-1 rounded hover:bg-black/5"
+                        aria-label={t.common.edit}
+                        title={t.common.edit}
+                      >
+                        <Pencil size={12} />
+                      </button>
                     ) : null}
                   </div>
                 </article>
@@ -692,6 +788,7 @@ function BookingFormModal({
   onSubmit,
   submitting,
   error,
+  barbers,
   services,
   clients,
   slots,
@@ -703,17 +800,22 @@ function BookingFormModal({
   onSubmit: (e: FormEvent) => void;
   submitting: boolean;
   error: string | null;
+  barbers: Staff[];
   services: Service[];
   clients: Client[];
   slots: AvailabilitySlot[];
   slotsLoading: boolean;
 }) {
+  const isEditing = !!form.id;
+
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
       <div className="absolute inset-y-0 right-0 w-full max-w-md bg-[var(--color-surface)] border-l border-[var(--color-border)] flex flex-col shadow-lg">
         <header className="px-5 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
-          <h2 className="text-base font-semibold">{t.calendar.newBooking}</h2>
+          <h2 className="text-base font-semibold">
+            {isEditing ? t.calendar.editBooking : t.calendar.newBooking}
+          </h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-md text-[var(--color-text-muted)] hover:bg-[var(--color-surface-muted)]"
@@ -724,9 +826,26 @@ function BookingFormModal({
         </header>
         <form onSubmit={onSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
           <SelectField
+            label={t.calendar.booking.barber}
+            value={form.barberId}
+            onChange={(e) =>
+              setForm({ ...form, barberId: e.currentTarget.value, startsAt: '' })
+            }
+            options={[
+              { value: '', label: t.calendar.selectBarber },
+              ...barbers.map((b) => ({ value: b.id, label: b.displayName })),
+            ]}
+          />
+          <SelectField
             label={t.calendar.booking.service}
             value={form.serviceId}
-            onChange={(e) => setForm({ ...form, serviceId: e.currentTarget.value, startsAt: '' })}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                serviceId: e.currentTarget.value,
+                startsAt: isEditing ? form.startsAt : '',
+              })
+            }
             options={[
               { value: '', label: t.calendar.booking.pickService },
               ...services.map((srv) => ({
@@ -744,31 +863,40 @@ function BookingFormModal({
               ...clients.map((c) => ({ value: c.id, label: `${c.name} · ${c.phone}` })),
             ]}
           />
-          <SelectField
-            label={t.calendar.booking.slot}
-            value={form.startsAt}
-            onChange={(e) => setForm({ ...form, startsAt: e.currentTarget.value })}
-            disabled={!form.serviceId || slotsLoading}
-            options={[
-              {
-                value: '',
-                label: form.serviceId
-                  ? slotsLoading
-                    ? t.common.loading
-                    : slots.length === 0
-                      ? t.calendar.noSlots
-                      : t.calendar.booking.pickSlot
-                  : t.calendar.booking.pickService,
-              },
-              ...slots.map((s) => ({
-                value: s.startsAt,
-                label: new Date(s.startsAt).toLocaleTimeString('pt-BR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-              })),
-            ]}
-          />
+          {isEditing ? (
+            <Field
+              label={t.calendar.booking.startsAt}
+              type="datetime-local"
+              value={form.startsAtLocal}
+              onChange={(e) => setForm({ ...form, startsAtLocal: e.currentTarget.value })}
+            />
+          ) : (
+            <SelectField
+              label={t.calendar.booking.slot}
+              value={form.startsAt}
+              onChange={(e) => setForm({ ...form, startsAt: e.currentTarget.value })}
+              disabled={!form.serviceId || !form.barberId || slotsLoading}
+              options={[
+                {
+                  value: '',
+                  label: form.serviceId
+                    ? slotsLoading
+                      ? t.common.loading
+                      : slots.length === 0
+                        ? t.calendar.noSlots
+                        : t.calendar.booking.pickSlot
+                    : t.calendar.booking.pickService,
+                },
+                ...slots.map((s) => ({
+                  value: s.startsAt,
+                  label: new Date(s.startsAt).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }),
+                })),
+              ]}
+            />
+          )}
           <Field
             label={t.calendar.booking.notes}
             value={form.notes}
@@ -783,11 +911,20 @@ function BookingFormModal({
           <Button
             type="submit"
             loading={submitting}
-            disabled={!form.serviceId || !form.clientId || !form.startsAt}
+            disabled={
+              !form.barberId ||
+              !form.serviceId ||
+              !form.clientId ||
+              (isEditing ? !form.startsAtLocal : !form.startsAt)
+            }
             className="w-full gap-2"
           >
-            <Plus size={15} />
-            {submitting ? t.calendar.booking.submitting : t.calendar.booking.submit}
+            {isEditing ? <Pencil size={15} /> : <Plus size={15} />}
+            {submitting
+              ? t.calendar.booking.submitting
+              : isEditing
+                ? t.calendar.booking.update
+                : t.calendar.booking.submit}
           </Button>
         </form>
       </div>

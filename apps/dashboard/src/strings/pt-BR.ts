@@ -198,6 +198,7 @@ export const t = {
     barber: 'Barbeiro',
     selectBarber: 'Selecione um barbeiro',
     newBooking: 'Novo agendamento',
+    editBooking: 'Editar agendamento',
     cancelBooking: 'Cancelar agendamento',
     cancelConfirm: 'Cancelar este agendamento?',
     noBookings: 'Sem agendamentos para este dia.',
@@ -208,9 +209,12 @@ export const t = {
     booking: {
       service: 'Serviço',
       client: 'Cliente',
+      barber: 'Barbeiro',
       slot: 'Horário disponível',
+      startsAt: 'Data e horário',
       notes: 'Observações',
       submit: 'Confirmar',
+      update: 'Salvar alterações',
       submitting: 'Salvando...',
       pickService: 'Selecione um serviço',
       pickClient: 'Selecione um cliente',
@@ -248,6 +252,7 @@ export const t = {
     },
     errors: {
       overlap: 'Conflito de horário com outro agendamento.',
+      barberService: 'Este barbeiro não atende o serviço selecionado.',
       generic: 'Não foi possível salvar o agendamento.',
       cancel: 'Não foi possível cancelar o agendamento.',
       status: 'Não foi possível atualizar o status.',

@@ -152,30 +152,23 @@ bookingsRouter.patch(
     const { id } = c.req.valid('param');
     const input = c.req.valid('json');
 
-    // If startsAt changes, recompute ends_at from the existing service duration.
+    const current = await supabase
+      .from('bookings')
+      .select('client_id, barber_id, service_id, starts_at')
+      .eq('organization_id', user.organizationId!)
+      .eq('id', id)
+      .maybeSingle();
+    if (current.error) throw new Error(`booking_lookup_failed: ${current.error.message}`);
+    if (!current.data) throw new NotFound('booking_not_found');
+
+    const nextBarberId = input.barberId ?? (current.data.barber_id as string);
+    const nextServiceId = input.serviceId ?? (current.data.service_id as string);
+    const nextStartsAt = input.startsAt ?? (current.data.starts_at as string);
+
     const patch: Record<string, unknown> = {};
-
-    if (input.startsAt !== undefined) {
-      // Need the service duration. Fetch the booking + service in one round
-      // trip to avoid a race.
-      const cur = await supabase
-        .from('bookings')
-        .select('service_id, services(duration_minutes)')
-        .eq('organization_id', user.organizationId!)
-        .eq('id', id)
-        .maybeSingle();
-      if (cur.error) throw new Error(`booking_lookup_failed: ${cur.error.message}`);
-      if (!cur.data) throw new NotFound('booking_not_found');
-
-      const dur = (cur.data as unknown as { services: { duration_minutes: number } }).services
-        .duration_minutes;
-      const startsAt = new Date(input.startsAt);
-      if (Number.isNaN(startsAt.getTime())) throw new BadRequest('invalid_starts_at');
-      patch.starts_at = startsAt.toISOString();
-      patch.ends_at = new Date(startsAt.getTime() + Number(dur) * 60_000).toISOString();
-    }
-
+    if (input.clientId !== undefined) patch.client_id = input.clientId;
     if (input.barberId !== undefined) patch.barber_id = input.barberId;
+    if (input.serviceId !== undefined) patch.service_id = input.serviceId;
     if (input.notes !== undefined) patch.notes = input.notes;
     if (input.cancellationReason !== undefined)
       patch.cancellation_reason = input.cancellationReason;
@@ -184,9 +177,30 @@ bookingsRouter.patch(
       if (input.status === 'cancelled') patch.cancelled_at = new Date().toISOString();
     }
 
-    if (input.barberId !== undefined) {
-      const serviceId = await serviceIdForBooking(supabase, user.organizationId!, id);
-      await assertBarberCanPerformService(supabase, user.organizationId!, input.barberId, serviceId);
+    if (
+      input.barberId !== undefined ||
+      input.serviceId !== undefined ||
+      input.startsAt !== undefined
+    ) {
+      const serviceRes = await supabase
+        .from('services')
+        .select('id, duration_minutes, is_active')
+        .eq('organization_id', user.organizationId!)
+        .eq('id', nextServiceId)
+        .maybeSingle();
+      if (serviceRes.error)
+        throw new Error(`booking_service_lookup_failed: ${serviceRes.error.message}`);
+      if (!serviceRes.data) throw new NotFound('service_not_found');
+      if (!serviceRes.data.is_active) throw new BadRequest('service_inactive');
+
+      await assertBarberCanPerformService(supabase, user.organizationId!, nextBarberId, nextServiceId);
+
+      const startsAt = new Date(nextStartsAt);
+      if (Number.isNaN(startsAt.getTime())) throw new BadRequest('invalid_starts_at');
+      patch.starts_at = startsAt.toISOString();
+      patch.ends_at = new Date(
+        startsAt.getTime() + Number(serviceRes.data.duration_minutes) * 60_000,
+      ).toISOString();
     }
 
     const { data, error } = await supabase
@@ -201,6 +215,7 @@ bookingsRouter.patch(
       .maybeSingle();
 
     if (error?.code === PG_EXCLUSION_VIOLATION) throw new Conflict('booking_overlap');
+    if (error?.code === PG_FK_VIOLATION) throw new BadRequest('invalid_reference');
     if (error) throw new Error(`booking_update_failed: ${error.message}`);
     if (!data) throw new NotFound('booking_not_found');
 
@@ -262,22 +277,6 @@ async function audit(
     userAgent: c.req.header('user-agent') ?? null,
   });
   if (error) c.get('logger').warn('audit_write_failed', { action, entityId, error: error.message });
-}
-
-async function serviceIdForBooking(
-  supabase: ReturnType<typeof supabaseAsUser>,
-  organizationId: string,
-  bookingId: string,
-): Promise<string> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('service_id')
-    .eq('organization_id', organizationId)
-    .eq('id', bookingId)
-    .maybeSingle();
-  if (error) throw new Error(`booking_lookup_failed: ${error.message}`);
-  if (!data) throw new NotFound('booking_not_found');
-  return data.service_id as string;
 }
 
 async function assertBarberCanPerformService(

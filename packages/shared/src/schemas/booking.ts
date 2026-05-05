@@ -60,7 +60,9 @@ export const CreateBookingInputSchema = z.object({
 
 export const UpdateBookingInputSchema = z
   .object({
+    clientId: z.string().uuid().optional(),
     barberId: z.string().uuid().optional(),
+    serviceId: z.string().uuid().optional(),
     startsAt: isoDate.optional(),
     status: BookingStatusSchema.optional(),
     notes: optionalText(1000),
