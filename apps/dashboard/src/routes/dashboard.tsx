@@ -1,7 +1,9 @@
-// Empty dashboard with shop name + four placeholder KPI tiles + getting-
-// started callout. SPRINT_1 §10 demo target met by this page; real KPI
-// values + booking entry points land in S2.
+// Home dashboard: shop name + four live KPI tiles + getting-started callout.
+// KPIs come from GET /v1/dashboard/kpis (see apps/api/src/routes/dashboard.ts).
+// While loading or on error, tiles fall back to the "—" placeholder so the
+// layout stays stable and an empty org reads as "no data yet" not "broken".
 import { Link, useOutletContext } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
   ArrowRight,
@@ -13,6 +15,8 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { formatBRL, type DashboardKpis } from '@cadeirapro/shared';
+import { api } from '../lib/api';
 import { t } from '../strings/pt-BR';
 import { formatPtBR } from '../lib/format';
 
@@ -20,8 +24,10 @@ interface LayoutContext {
   shopName: string;
 }
 
+type KpiId = 'bookingsToday' | 'revenueToday' | 'noShowRate' | 'activeClients';
+
 interface KPIDef {
-  id: 'bookingsToday' | 'revenueToday' | 'noShowRate' | 'activeClients';
+  id: KpiId;
   label: string;
   icon: LucideIcon;
   hint: string;
@@ -93,9 +99,34 @@ const NEXT_STEPS: NextStep[] = [
   },
 ];
 
+function formatKpi(id: KpiId, kpis: DashboardKpis | undefined): string {
+  if (!kpis) return t.dashboard.placeholder;
+  switch (id) {
+    case 'bookingsToday':
+      return String(kpis.bookingsToday);
+    case 'revenueToday':
+      return formatBRL(kpis.revenueTodayCents);
+    case 'noShowRate':
+      return kpis.noShowRate === null
+        ? t.dashboard.placeholder
+        : `${kpis.noShowRate.toFixed(1)}%`;
+    case 'activeClients':
+      return String(kpis.activeClients90d);
+  }
+}
+
 export function DashboardPage() {
   const { shopName } = useOutletContext<LayoutContext>();
   const today = formatPtBR(new Date()).split(' ')[0]; // DD/MM/YYYY
+
+  const kpisQuery = useQuery({
+    queryKey: ['dashboard', 'kpis'],
+    queryFn: () => api.dashboard.kpis(),
+    // KPIs are read-mostly; one refetch per minute is plenty for the home
+    // screen and avoids hammering the Worker on tab focus storms.
+    staleTime: 60_000,
+  });
+  const kpis = kpisQuery.data;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -139,7 +170,7 @@ export function DashboardPage() {
                 </span>
               </div>
               <div className="text-3xl font-semibold text-[var(--color-text)] tabular-nums">
-                {t.dashboard.placeholder}
+                {formatKpi(kpi.id, kpis)}
               </div>
               <p className="text-[11px] text-[var(--color-text-muted)] mt-1.5 leading-snug">
                 {kpi.hint}

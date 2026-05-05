@@ -80,4 +80,5 @@ export type {
   HoursMap,
   HoursWindow,
   ThemeConfig,
+  DashboardKpis,
 } from './types';

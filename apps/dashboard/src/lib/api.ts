@@ -14,6 +14,7 @@ import type {
   CreateScheduleBlockInput,
   CreateServiceInput,
   CreateStaffInput,
+  DashboardKpis,
   Me,
   Organization,
   ScheduleBlock,
@@ -179,5 +180,8 @@ export const api = {
   organization: {
     update: (input: UpdateOrganizationInput) =>
       request<Organization>('PATCH', '/v1/organization', input, { idempotent: true }),
+  },
+  dashboard: {
+    kpis: () => request<DashboardKpis>('GET', '/v1/dashboard/kpis'),
   },
 };

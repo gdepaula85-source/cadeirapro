@@ -72,3 +72,15 @@ export type UpdateOrganizationInput = z.infer<typeof UpdateOrganizationInputSche
 export type HoursMap = z.infer<typeof HoursMapSchema>;
 export type HoursWindow = z.infer<typeof HoursWindowSchema>;
 export type ThemeConfig = z.infer<typeof ThemeConfigSchema>;
+
+/**
+ * Response shape of GET /v1/dashboard/kpis. Read-only — no Zod schema
+ * because it isn't user-input. `noShowRate` is a percentage in [0, 100]
+ * or `null` when the 30-day denominator (no_show + completed) is zero.
+ */
+export interface DashboardKpis {
+  bookingsToday: number;
+  revenueTodayCents: number;
+  noShowRate: number | null;
+  activeClients90d: number;
+}

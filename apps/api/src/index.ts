@@ -15,6 +15,7 @@ import { bookingsRouter } from './routes/bookings';
 import { availabilityRouter } from './routes/availability';
 import { organizationRouter } from './routes/organization';
 import { scheduleBlocksRouter } from './routes/schedule-blocks';
+import { dashboardRouter } from './routes/dashboard';
 
 const app = new Hono<AppEnv>();
 
@@ -36,6 +37,7 @@ app.route('/', bookingsRouter);
 app.route('/', availabilityRouter);
 app.route('/', organizationRouter);
 app.route('/', scheduleBlocksRouter);
+app.route('/', dashboardRouter);
 
 // 404 fallback.
 app.notFound((c) => c.json({ error: { code: 'not_found' } }, 404));
