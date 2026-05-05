@@ -17,6 +17,7 @@ const ForgotPasswordPage = lazyNamed(
 );
 const LoginPage = lazyNamed(() => import('./routes/login'), 'LoginPage');
 const PaymentsPage = lazyNamed(() => import('./routes/payments'), 'PaymentsPage');
+const PublicBookingPage = lazyNamed(() => import('./routes/public-booking'), 'PublicBookingPage');
 const ResetPasswordPage = lazyNamed(() => import('./routes/reset-password'), 'ResetPasswordPage');
 const ServicesPage = lazyNamed(() => import('./routes/services'), 'ServicesPage');
 const SettingsPage = lazyNamed(() => import('./routes/settings'), 'SettingsPage');
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
   { path: '/signup', element: routeElement(SignUpStep1Page) },
   { path: '/signup/shop', element: routeElement(SignUpStep2Page) },
   { path: '/signup/done', element: routeElement(SignUpDonePage) },
+  { path: '/book/:slug', element: routeElement(PublicBookingPage) },
   {
     path: '/',
     element: <DashboardLayout />,

@@ -2,7 +2,7 @@
 // top bar with shop name + mobile-only menu toggle, content area for nested
 // routes.
 import { useEffect, useState } from 'react';
-import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   CalendarDays,
@@ -40,6 +40,14 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/payments', label: t.nav.payments, icon: CreditCard },
   { to: '/settings', label: t.nav.settings, icon: Settings },
 ];
+
+const MOBILE_NAV_ITEMS = [
+  { to: '/', label: t.nav.dashboard, icon: Home },
+  { to: '/calendar', label: t.nav.calendar, icon: CalendarDays },
+  { to: '/clients', label: t.nav.clients, icon: Users },
+  { to: '/payments', label: t.nav.payments, icon: CreditCard },
+  { to: '/settings', label: 'Mais', icon: Settings },
+] satisfies NavItem[];
 
 interface NavProps {
   onItemClick?: () => void;
@@ -237,8 +245,8 @@ export function DashboardLayout() {
         </header>
         {claimsMissing ? (
           <div className="m-4 md:m-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <strong>Sessão precisa ser atualizada.</strong> Se esta mensagem continuar, saia e
-            entre novamente para receber as permissões da loja.
+            <strong>Sessão precisa ser atualizada.</strong> Se esta mensagem continuar, saia e entre
+            novamente para receber as permissões da loja.
             <button
               type="button"
               className="ml-3 font-medium underline underline-offset-2"
@@ -258,10 +266,31 @@ export function DashboardLayout() {
             {(meQuery.error as Error)?.message ?? 'erro desconhecido'}
           </div>
         ) : null}
-        <div className="flex-1 p-4 md:p-6 lg:p-8">
+        <div className="flex-1 p-4 pb-24 md:p-6 lg:p-8">
           <Outlet context={{ shopName }} />
         </div>
       </main>
+
+      <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 rounded-[24px] border border-[#dfe7dc] bg-white/95 px-2 py-2 shadow-[0_16px_45px_rgb(20_42_25_/_0.18)] backdrop-blur md:hidden">
+        {MOBILE_NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const active =
+            location.pathname === item.to ||
+            (item.to !== '/' && location.pathname.startsWith(item.to));
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`flex min-w-0 flex-col items-center gap-1 rounded-[18px] px-2 py-2 text-[10px] font-medium transition ${
+                active ? 'bg-[#edf7e9] text-[#176527]' : 'text-[#647067]'
+              }`}
+            >
+              <Icon size={18} />
+              <span className="truncate">{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

@@ -47,6 +47,8 @@ export class ApiError extends Error {
 interface RequestOpts {
   /** Auto-attach a fresh UUID Idempotency-Key for mutation routes. */
   idempotent?: boolean;
+  /** Public widget endpoints must not depend on an auth session. */
+  auth?: boolean;
 }
 
 async function authHeader(): Promise<Record<string, string>> {
@@ -63,7 +65,7 @@ async function request<T>(
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(await authHeader()),
+    ...(opts.auth === false ? {} : await authHeader()),
   };
   if (opts.idempotent) headers['Idempotency-Key'] = uuid();
 
@@ -184,4 +186,94 @@ export const api = {
   dashboard: {
     kpis: () => request<DashboardKpis>('GET', '/v1/dashboard/kpis'),
   },
+  public: {
+    org: (slug: string) =>
+      request<PublicOrg>('GET', `/v1/public/orgs/${encodeURIComponent(slug)}`, undefined, {
+        auth: false,
+      }),
+    services: (slug: string) =>
+      request<PublicService[]>(
+        'GET',
+        `/v1/public/orgs/${encodeURIComponent(slug)}/services`,
+        undefined,
+        { auth: false },
+      ),
+    barbers: (slug: string, serviceId?: string) => {
+      const params = new URLSearchParams();
+      if (serviceId) params.set('serviceId', serviceId);
+      return request<PublicBarber[]>(
+        'GET',
+        `/v1/public/orgs/${encodeURIComponent(slug)}/barbers${params.size ? `?${params}` : ''}`,
+        undefined,
+        { auth: false },
+      );
+    },
+    availability: (slug: string, query: AvailabilityQuery) => {
+      const params = new URLSearchParams();
+      params.set('serviceId', query.serviceId);
+      params.set('barberId', query.barberId);
+      params.set('date', query.date);
+      return request<AvailabilitySlot[]>(
+        'GET',
+        `/v1/public/orgs/${encodeURIComponent(slug)}/availability?${params.toString()}`,
+        undefined,
+        { auth: false },
+      );
+    },
+    createBooking: (slug: string, input: PublicBookingInput) =>
+      request<PublicBookingResult>(
+        'POST',
+        `/v1/public/orgs/${encodeURIComponent(slug)}/bookings`,
+        input,
+        { auth: false },
+      ),
+  },
 };
+
+export interface PublicOrg {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  themeId: string;
+  themeConfig: Record<string, unknown>;
+  timezone: string;
+  whatsappPhone: string | null;
+}
+
+export interface PublicService {
+  id: string;
+  organizationId: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  priceCents: number;
+  photoUrl: string | null;
+  sortOrder: number;
+}
+
+export interface PublicBarber {
+  id: string;
+  organizationId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+}
+
+export interface PublicBookingInput {
+  serviceId: string;
+  barberId: string;
+  startsAt: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string | null;
+  notes?: string | null;
+}
+
+export interface PublicBookingResult {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+}
