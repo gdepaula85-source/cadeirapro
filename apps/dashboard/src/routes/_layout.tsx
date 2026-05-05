@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { api, ApiError } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { ThemeApplier } from '../components/ThemeApplier';
 import { t } from '../strings/pt-BR';
 import type { ThemeConfig } from '@cadeirapro/shared';
@@ -116,6 +117,7 @@ export function DashboardLayout() {
   const { session, loading, signOut } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [claimsRefreshAttempted, setClaimsRefreshAttempted] = useState(false);
 
   // Close mobile drawer on route change.
   useEffect(() => {
@@ -141,10 +143,15 @@ export function DashboardLayout() {
   useEffect(() => {
     const err = meQuery.error;
     if (!(err instanceof ApiError)) return;
-    if (err.code === 'claims_missing' || err.code === 'unauthorized') {
-      signOut();
-    }
-  }, [meQuery.error, signOut]);
+    if (err.code !== 'claims_missing' || claimsRefreshAttempted) return;
+    setClaimsRefreshAttempted(true);
+    supabase.auth.refreshSession().finally(() => {
+      meQuery.refetch();
+    });
+  }, [claimsRefreshAttempted, meQuery.error, meQuery.refetch]);
+
+  const claimsMissing =
+    meQuery.error instanceof ApiError && meQuery.error.code === 'claims_missing';
 
   if (loading) {
     return (
@@ -228,11 +235,24 @@ export function DashboardLayout() {
             </div>
           </div>
         </header>
-        {meQuery.isError &&
-        !(
-          meQuery.error instanceof ApiError &&
-          (meQuery.error.code === 'claims_missing' || meQuery.error.code === 'unauthorized')
-        ) ? (
+        {claimsMissing ? (
+          <div className="m-4 md:m-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <strong>Sessão precisa ser atualizada.</strong> Se esta mensagem continuar, saia e
+            entre novamente para receber as permissões da loja.
+            <button
+              type="button"
+              className="ml-3 font-medium underline underline-offset-2"
+              onClick={() => {
+                setClaimsRefreshAttempted(false);
+                supabase.auth.refreshSession().finally(() => {
+                  meQuery.refetch();
+                });
+              }}
+            >
+              Atualizar sessão
+            </button>
+          </div>
+        ) : meQuery.isError ? (
           <div className="m-4 md:m-6 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-4 py-3 text-sm text-[var(--color-danger)]">
             <strong>Falha ao carregar /v1/me:</strong>{' '}
             {(meQuery.error as Error)?.message ?? 'erro desconhecido'}
