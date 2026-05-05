@@ -10,6 +10,7 @@ import {
   FileDigit,
   KeyRound,
   Phone,
+  Palette,
   Settings as SettingsIcon,
   Store,
 } from 'lucide-react';
@@ -209,7 +210,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       <header>
         <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
           <SettingsIcon size={16} />
@@ -223,47 +224,136 @@ export function SettingsPage() {
         </p>
       </header>
 
-      <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-2">
-        <button onClick={() => setTab('shop')} className={tabClass(tab === 'shop')}>
-          {t.settings.tabs.shop}
-        </button>
-        <button onClick={() => setTab('hours')} className={tabClass(tab === 'hours')}>
-          {t.settings.tabs.hours}
-        </button>
-        <button onClick={() => setTab('branding')} className={tabClass(tab === 'branding')}>
-          {t.settings.tabs.branding}
-        </button>
-      </div>
+      <section className="grid gap-3 md:grid-cols-3">
+        <SettingsMetric label="Loja" value={shop.shopName || t.common.none} />
+        <SettingsMetric
+          label="Dias abertos"
+          value={String(Object.values(hours).filter((day) => day.enabled).length)}
+        />
+        <SettingsMetric label="WhatsApp" value={shop.whatsappPhone || t.common.none} />
+      </section>
 
-      <form onSubmit={onSubmit} className="space-y-6">
-        {tab === 'shop' ? (
-          <ShopTab shop={shop} setShop={setShop} />
-        ) : tab === 'hours' ? (
-          <HoursTab hours={hours} setHours={setHours} />
-        ) : (
-          <BrandingTab branding={branding} setBranding={setBranding} />
-        )}
-
-        {error ? (
-          <div className="flex items-start gap-2 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">
-            <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <span>{error}</span>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-2 border-b border-[var(--color-border)] pb-2">
+            <button
+              type="button"
+              onClick={() => setTab('shop')}
+              className={tabClass(tab === 'shop')}
+            >
+              {t.settings.tabs.shop}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('hours')}
+              className={tabClass(tab === 'hours')}
+            >
+              {t.settings.tabs.hours}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('branding')}
+              className={tabClass(tab === 'branding')}
+            >
+              {t.settings.tabs.branding}
+            </button>
           </div>
-        ) : null}
-        {saved ? (
-          <div className="flex items-start gap-2 rounded-md border border-[var(--color-success)]/40 bg-emerald-50 px-3 py-2 text-sm text-[var(--color-success)]">
-            <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-            <span>{t.settings.saved}</span>
-          </div>
-        ) : null}
 
-        <div className="flex justify-end">
-          <Button type="submit" loading={saveMutation.isPending}>
-            {saveMutation.isPending ? t.settings.saving : t.settings.save}
-          </Button>
+          <form onSubmit={onSubmit} className="space-y-6">
+            {tab === 'shop' ? (
+              <ShopTab shop={shop} setShop={setShop} />
+            ) : tab === 'hours' ? (
+              <HoursTab hours={hours} setHours={setHours} />
+            ) : (
+              <BrandingTab branding={branding} setBranding={setBranding} />
+            )}
+
+            {error ? (
+              <div className="flex items-start gap-2 rounded-md border border-[var(--color-danger)]/40 bg-red-50 px-3 py-2 text-sm text-[var(--color-danger)]">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            ) : null}
+            {saved ? (
+              <div className="flex items-start gap-2 rounded-md border border-[var(--color-success)]/40 bg-emerald-50 px-3 py-2 text-sm text-[var(--color-success)]">
+                <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                <span>{t.settings.saved}</span>
+              </div>
+            ) : null}
+
+            <div className="flex justify-end">
+              <Button type="submit" loading={saveMutation.isPending}>
+                {saveMutation.isPending ? t.settings.saving : t.settings.save}
+              </Button>
+            </div>
+          </form>
         </div>
-      </form>
+        <SettingsPreview shop={shop} branding={branding} hours={hours} />
+      </div>
     </div>
+  );
+}
+
+function SettingsMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className="mt-2 truncate text-lg font-semibold text-[var(--color-text)]">{value}</p>
+    </div>
+  );
+}
+
+function SettingsPreview({
+  shop,
+  branding,
+  hours,
+}: {
+  shop: ShopFormState;
+  branding: BrandingFormState;
+  hours: HoursState;
+}) {
+  const nextOpenDay = DAY_ORDER.find((day) => hours[day].enabled);
+
+  return (
+    <aside className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+      <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
+        <Palette size={16} />
+        <h2 className="text-sm font-semibold text-[var(--color-text)]">Prévia da loja</h2>
+      </div>
+      <div
+        className="mt-4 overflow-hidden rounded-lg border border-[var(--color-border)]"
+        style={{ background: branding.primary, color: '#fff' }}
+      >
+        <div className="p-4">
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-md text-sm font-bold"
+            style={{ background: branding.accent, color: '#111827' }}
+          >
+            CP
+          </div>
+          <p className="mt-4 text-lg font-semibold">{shop.shopName || t.app.name}</p>
+          <p className="mt-1 text-sm opacity-75">
+            {shop.whatsappPhone || t.settings.shop.whatsappPhone}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 space-y-2 text-sm text-[var(--color-text-muted)]">
+        <p>
+          Primeiro dia aberto:{' '}
+          <span className="font-medium text-[var(--color-text)]">
+            {nextOpenDay ? t.settings.hours.days[nextOpenDay] : t.settings.hours.closed}
+          </span>
+        </p>
+        <p>
+          Logo:{' '}
+          <span className="font-medium text-[var(--color-text)]">
+            {branding.logoUrl ? 'configurado' : t.common.none}
+          </span>
+        </p>
+      </div>
+    </aside>
   );
 }
 

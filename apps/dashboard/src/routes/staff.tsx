@@ -152,6 +152,9 @@ export function StaffPage() {
 
   const sorted = useMemo(() => staffQuery.data ?? [], [staffQuery.data]);
   const selectedStaff = sorted.find((member) => member.id === selectedStaffId) ?? null;
+  const activeMembers = sorted.filter((member) => member.isActive);
+  const activeBarbers = activeMembers.filter((member) => member.role === 'barber');
+  const assignedBarbers = activeBarbers.filter((member) => member.assignedServiceIds.length > 0);
 
   function edit(member: Staff) {
     setError(null);
@@ -243,6 +246,12 @@ export function StaffPage() {
           {t.staff.includeInactive}
         </label>
       </header>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <StaffMetric label="Ativos" value={String(activeMembers.length)} />
+        <StaffMetric label="Barbeiros" value={String(activeBarbers.length)} />
+        <StaffMetric label="Com serviços" value={String(assignedBarbers.length)} />
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-5 items-start">
         <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
@@ -550,6 +559,17 @@ export function StaffPage() {
           />
         </aside>
       </div>
+    </div>
+  );
+}
+
+function StaffMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">{value}</p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, Clock, Pencil, Plus, Scissors } from 'lucide-react';
+import { Archive, Clock, Pencil, Plus, Scissors, Sparkles, WalletCards } from 'lucide-react';
 import type { Service } from '@cadeirapro/shared';
 import { toCents } from '@cadeirapro/shared';
 import { api } from '../lib/api';
@@ -32,6 +32,7 @@ export function ServicesPage() {
   const qc = useQueryClient();
   const [includeInactive, setIncludeInactive] = useState(false);
   const [form, setForm] = useState<ServiceFormState>(emptyForm);
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const servicesQuery = useQuery({
@@ -66,9 +67,26 @@ export function ServicesPage() {
   });
 
   const sorted = useMemo(() => servicesQuery.data ?? [], [servicesQuery.data]);
+  const selectedService = sorted.find((service) => service.id === selectedServiceId) ?? null;
+  const activeServices = sorted.filter((service) => service.isActive);
+  const averageTicket =
+    activeServices.length > 0
+      ? Math.round(
+          activeServices.reduce((sum, service) => sum + service.priceCents, 0) /
+            activeServices.length,
+        )
+      : 0;
+  const averageDuration =
+    activeServices.length > 0
+      ? Math.round(
+          activeServices.reduce((sum, service) => sum + service.durationMinutes, 0) /
+            activeServices.length,
+        )
+      : 0;
 
   function edit(service: Service) {
     setError(null);
+    setSelectedServiceId(service.id);
     setForm({
       id: service.id,
       name: service.name,
@@ -109,7 +127,27 @@ export function ServicesPage() {
         </label>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">
+      <section className="grid gap-3 sm:grid-cols-3">
+        <ServiceMetric
+          icon={<Scissors size={16} />}
+          label="Serviços ativos"
+          value={String(activeServices.length)}
+        />
+        <ServiceMetric
+          icon={<WalletCards size={16} />}
+          label="Ticket médio"
+          value={activeServices.length ? formatBRL(averageTicket) : t.common.none}
+        />
+        <ServiceMetric
+          icon={<Clock size={16} />}
+          label="Duração média"
+          value={
+            activeServices.length ? `${averageDuration} ${t.common.minutesShort}` : t.common.none
+          }
+        />
+      </section>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
         <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--color-border)] text-sm font-medium">
             {servicesQuery.isLoading
@@ -123,9 +161,15 @@ export function ServicesPage() {
               {sorted.map((service) => (
                 <article
                   key={service.id}
-                  className="p-4 flex flex-col sm:flex-row gap-4 sm:items-center"
+                  className={`p-4 flex flex-col sm:flex-row gap-4 sm:items-center transition ${
+                    selectedServiceId === service.id ? 'bg-[var(--color-surface-muted)]' : ''
+                  }`}
                 >
-                  <div className="flex-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedServiceId(service.id)}
+                    className="flex-1 min-w-0 text-left"
+                  >
                     <div className="flex items-center gap-2">
                       <h2 className="font-medium text-[var(--color-text)] truncate">
                         {service.name}
@@ -152,7 +196,7 @@ export function ServicesPage() {
                         {formatBRL(service.priceCents)}
                       </span>
                     </div>
-                  </div>
+                  </button>
                   <div className="flex gap-2">
                     <Button variant="secondary" onClick={() => edit(service)} className="px-3">
                       <Pencil size={14} />
@@ -239,8 +283,65 @@ export function ServicesPage() {
               {form.id ? t.common.save : t.common.create}
             </Button>
           </form>
+          <ServiceDetailPanel service={selectedService} />
         </aside>
       </div>
     </div>
+  );
+}
+
+function ServiceMetric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+      <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
+        {icon}
+        <p className="text-xs font-medium uppercase tracking-wider">{label}</p>
+      </div>
+      <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">{value}</p>
+    </div>
+  );
+}
+
+function ServiceDetailPanel({ service }: { service: Service | null }) {
+  if (!service) {
+    return (
+      <section className="mt-5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[var(--color-text-muted)]">
+        Selecione um serviço para ver o resumo comercial.
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-[var(--color-text)]">{service.name}</p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            {service.isActive ? t.common.active : t.common.inactive} · ordem {service.sortOrder}
+          </p>
+        </div>
+        <span className="rounded bg-[#edf7e9] px-2 py-1 text-xs font-semibold text-[#176527]">
+          {formatBRL(service.priceCents)}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-2">
+        <div className="rounded-md bg-[var(--color-surface)] px-3 py-2 text-sm">
+          <span className="text-[var(--color-text-muted)]">Tempo: </span>
+          <span className="font-medium text-[var(--color-text)]">
+            {service.durationMinutes} {t.common.minutesShort}
+          </span>
+        </div>
+        <div className="rounded-md bg-[var(--color-surface)] px-3 py-2 text-sm">
+          <span className="text-[var(--color-text-muted)]">Descrição: </span>
+          <span className="font-medium text-[var(--color-text)]">
+            {service.description || t.common.none}
+          </span>
+        </div>
+        <div className="flex items-start gap-2 rounded-md bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-muted)]">
+          <Sparkles size={15} className="mt-0.5 shrink-0" />
+          <span>Este serviço aparece no widget público quando ativo e atribuído a barbeiros.</span>
+        </div>
+      </div>
+    </section>
   );
 }

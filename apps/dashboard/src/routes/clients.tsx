@@ -76,6 +76,8 @@ export function ClientsPage() {
 
   const clients = useMemo(() => clientsQuery.data ?? [], [clientsQuery.data]);
   const selectedClient = clients.find((client) => client.id === selectedClientId) ?? null;
+  const linkedClients = clients.filter((client) => client.authUserId).length;
+  const clientsWithEmail = clients.filter((client) => client.email).length;
 
   function edit(client: Client) {
     setError(null);
@@ -116,6 +118,12 @@ export function ClientsPage() {
           />
         </div>
       </header>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <ClientMetric label="Clientes ativos" value={String(clients.length)} />
+        <ClientMetric label="Com conta" value={String(linkedClients)} />
+        <ClientMetric label="Com e-mail" value={String(clientsWithEmail)} />
+      </section>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
         <section className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
@@ -235,6 +243,17 @@ export function ClientsPage() {
           />
         </aside>
       </div>
+    </div>
+  );
+}
+
+function ClientMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-semibold text-[var(--color-text)]">{value}</p>
     </div>
   );
 }
